@@ -1,11 +1,20 @@
 ﻿using System.Collections.Generic;
+using Datory;
 using Newtonsoft.Json;
-using SS.CMS.Repositories;
+using SS.CMS.Abstractions;
+using SS.CMS.Core;
 
 namespace SS.CMS.Cli.Updater.Tables
 {
     public partial class TableDbCache
     {
+        private readonly IDatabaseManager _databaseManager;
+
+        public TableDbCache(IDatabaseManager databaseManager)
+        {
+            _databaseManager = databaseManager;
+        }
+
         [JsonProperty("id")]
         public long Id { get; set; }
 
@@ -14,25 +23,5 @@ namespace SS.CMS.Cli.Updater.Tables
 
         [JsonProperty("cacheValue")]
         public string CacheValue { get; set; }
-    }
-
-    public partial class TableDbCache
-    {
-        public const string OldTableName = "bairong_Cache";
-
-        public static ConvertInfo GetConverter(IDbCacheRepository dbCacheRepository)
-        {
-            return new ConvertInfo
-            {
-                NewTableName = dbCacheRepository.TableName,
-                NewColumns = dbCacheRepository.TableColumns,
-                ConvertKeyDict = ConvertKeyDict,
-                ConvertValueDict = ConvertValueDict
-            };
-        }
-
-        private static readonly Dictionary<string, string> ConvertKeyDict = null;
-
-        private static readonly Dictionary<string, string> ConvertValueDict = null;
     }
 }

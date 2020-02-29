@@ -1,13 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using Datory;
 using Newtonsoft.Json;
-using SS.CMS.Models;
-using SS.CMS.Repositories;
+using SS.CMS.Abstractions;
+using SS.CMS.Core;
 
 namespace SS.CMS.Cli.Updater.Tables
 {
     public partial class TableConfig
     {
+        private readonly IDatabaseManager _databaseManager;
+
+        public TableConfig(IDatabaseManager databaseManager)
+        {
+            _databaseManager = databaseManager;
+        }
+
         [JsonProperty("id")]
         public long Id { get; set; }
 
@@ -34,33 +42,5 @@ namespace SS.CMS.Cli.Updater.Tables
 
         [JsonProperty("settingsXML")]
         public string SettingsXml { get; set; }
-
-        [JsonProperty("systemConfig")]
-        public string SystemConfig { get; set; }
-    }
-
-    public partial class TableConfig
-    {
-        public const string OldTableName = "bairong_Config";
-
-        public static ConvertInfo GetConverter(IConfigRepository configRepository)
-        {
-            return new ConvertInfo
-            {
-                NewTableName = configRepository.TableName,
-                NewColumns = configRepository.TableColumns,
-                ConvertKeyDict = ConvertKeyDict,
-                ConvertValueDict = ConvertValueDict
-            };
-        }
-
-        private static readonly Dictionary<string, string> ConvertKeyDict =
-            new Dictionary<string, string>
-            {
-                {nameof(Config.ExtendValues), nameof(SystemConfig)},
-                {nameof(Config.ExtendValues), nameof(SettingsXml)}
-            };
-
-        private static readonly Dictionary<string, string> ConvertValueDict = null;
     }
 }

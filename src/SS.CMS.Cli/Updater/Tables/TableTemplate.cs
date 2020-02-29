@@ -1,12 +1,20 @@
 ﻿using System.Collections.Generic;
+using Datory;
 using Newtonsoft.Json;
-using SS.CMS.Models;
-using SS.CMS.Repositories;
+using SS.CMS.Abstractions;
+using SS.CMS.Core;
 
 namespace SS.CMS.Cli.Updater.Tables
 {
     public partial class TableTemplate
     {
+        private readonly IDatabaseManager _databaseManager;
+
+        public TableTemplate(IDatabaseManager databaseManager)
+        {
+            _databaseManager = databaseManager;
+        }
+
         [JsonProperty("templateID")]
         public long TemplateId { get; set; }
 
@@ -36,31 +44,5 @@ namespace SS.CMS.Cli.Updater.Tables
 
         [JsonProperty("isDefault")]
         public string IsDefault { get; set; }
-    }
-
-    public partial class TableTemplate
-    {
-        public static readonly List<string> OldTableNames = new List<string>
-        {
-            "siteserver_Template",
-            "wcm_Template"
-        };
-
-        public static ConvertInfo GetConverter(ITemplateRepository templateRepository) => new ConvertInfo
-        {
-            NewTableName = templateRepository.TableName,
-            NewColumns = templateRepository.TableColumns,
-            ConvertKeyDict = ConvertKeyDict,
-            ConvertValueDict = ConvertValueDict
-        };
-
-        private static readonly Dictionary<string, string> ConvertKeyDict =
-            new Dictionary<string, string>
-            {
-                {nameof(Template.Id), nameof(TemplateId)},
-                {nameof(Template.SiteId), nameof(PublishmentSystemId)}
-            };
-
-        private static readonly Dictionary<string, string> ConvertValueDict = null;
     }
 }
