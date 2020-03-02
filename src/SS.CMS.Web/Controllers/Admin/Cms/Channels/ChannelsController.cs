@@ -3,13 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
 using SS.CMS.Abstractions.Dto.Request;
 using SS.CMS.Abstractions.Dto.Result;
-using SS.CMS.Api;
-using SS.CMS.Api.Stl;
-using SS.CMS.Plugins;
 using SS.CMS.Core.Serialization;
 using SS.CMS.Web.Extensions;
 
@@ -30,6 +28,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Channels
         private readonly IPathManager _pathManager;
         private readonly ICreateManager _createManager;
         private readonly IDatabaseManager _databaseManager;
+        private readonly IPluginManager _pluginManager;
         private readonly ISiteRepository _siteRepository;
         private readonly IChannelRepository _channelRepository;
         private readonly IContentRepository _contentRepository;
@@ -37,12 +36,13 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Channels
         private readonly ITemplateRepository _templateRepository;
         private readonly ITableStyleRepository _tableStyleRepository;
 
-        public ChannelsController(IAuthManager authManager, IPathManager pathManager, ICreateManager createManager, IDatabaseManager databaseManager, ISiteRepository siteRepository, IChannelRepository channelRepository, IContentRepository contentRepository, IChannelGroupRepository channelGroupRepository, ITemplateRepository templateRepository, ITableStyleRepository tableStyleRepository)
+        public ChannelsController(IAuthManager authManager, IPathManager pathManager, ICreateManager createManager, IDatabaseManager databaseManager, IPluginManager pluginManager, ISiteRepository siteRepository, IChannelRepository channelRepository, IContentRepository contentRepository, IChannelGroupRepository channelGroupRepository, ITemplateRepository templateRepository, ITableStyleRepository tableStyleRepository)
         {
             _authManager = authManager;
             _pathManager = pathManager;
             _createManager = createManager;
             _databaseManager = databaseManager;
+            _pluginManager = pluginManager;
             _siteRepository = siteRepository;
             _channelRepository = channelRepository;
             _contentRepository = contentRepository;
@@ -85,8 +85,8 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Channels
 
             var channelTemplates = await _templateRepository.GetTemplateListByTypeAsync(request.SiteId, TemplateType.ChannelTemplate);
             var contentTemplates = await _templateRepository.GetTemplateListByTypeAsync(request.SiteId, TemplateType.ContentTemplate);
-            var contentPlugins = await PluginContentManager.GetContentModelPluginsAsync();
-            var relatedPlugins = await PluginContentManager.GetAllContentRelatedPluginsAsync(false);
+            var contentPlugins = await _pluginManager.GetContentModelPluginsAsync();
+            var relatedPlugins = await _pluginManager.GetAllContentRelatedPluginsAsync(false);
 
             return new ChannelsResult
             {
@@ -233,21 +233,21 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Channels
         }
 
         [HttpPost, Route(RouteUpload)]
-        public async Task<ActionResult<StringResult>> Upload([FromBody] UploadRequest request)
+        public async Task<ActionResult<StringResult>> Upload([FromQuery] int siteId, [FromForm]IFormFile file)
         {
             var auth = await _authManager.GetAdminAsync();
             if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasChannelPermissionsAsync(request.SiteId, request.SiteId, Constants.ChannelPermissions.ChannelAdd))
+                !await auth.AdminPermissions.HasChannelPermissionsAsync(siteId, siteId, Constants.ChannelPermissions.ChannelAdd))
             {
                 return Unauthorized();
             }
 
-            if (request.File == null)
+            if (file == null)
             {
                 return this.Error("请选择有效的文件上传");
             }
 
-            var fileName = Path.GetFileName(request.File.FileName);
+            var fileName = Path.GetFileName(file.FileName);
 
             var sExt = PathUtils.GetExtension(fileName);
             if (!StringUtils.EqualsIgnoreCase(sExt, ".zip"))
@@ -257,8 +257,8 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Channels
 
             fileName = $"{StringUtils.GetShortGuid(false)}.zip";
             var filePath = _pathManager.GetTemporaryFilesPath(fileName);
-            DirectoryUtils.CreateDirectoryIfNotExists(filePath);
-            request.File.CopyTo(new FileStream(filePath, FileMode.Create));
+
+            await _pathManager.UploadAsync(file, filePath);
 
             return new StringResult
             {
@@ -281,7 +281,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Channels
                 var site = await _siteRepository.GetAsync(request.SiteId);
                 var filePath = _pathManager.GetTemporaryFilesPath(request.FileName);
 
-                var importObject = new ImportObject(_pathManager, _databaseManager, site, auth.AdminId);
+                var importObject = new ImportObject(_pathManager, _pluginManager, _databaseManager, site, auth.AdminId);
                 await importObject.ImportChannelsAndContentsByZipFileAsync(request.ChannelId, filePath,
                     request.IsOverride, null);
 
@@ -312,10 +312,10 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Channels
             var site = await _siteRepository.GetAsync(request.SiteId);
             if (site == null) return NotFound();
 
-            var exportObject = new ExportObject(_pathManager, _databaseManager, site);
+            var exportObject = new ExportObject(_pathManager, _databaseManager, _pluginManager, site);
             var fileName = await exportObject.ExportChannelsAsync(request.ChannelIds);
             var filePath = _pathManager.GetTemporaryFilesPath(fileName);
-            var url = ApiRouteActionsDownload.GetUrl(ApiManager.InnerApiUrl, filePath);
+            var url = _pathManager.GetDownloadApiUrl(_pathManager.InnerApiUrl, filePath);
 
             return new StringResult
             {

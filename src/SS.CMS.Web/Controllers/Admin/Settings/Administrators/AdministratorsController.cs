@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Datory;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
 using SS.CMS.Abstractions.Dto.Request;
@@ -26,16 +27,18 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Administrators
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
         private readonly IDatabaseManager _databaseManager;
+        private readonly IPluginManager _pluginManager;
         private readonly IAdministratorRepository _administratorRepository;
         private readonly IRoleRepository _roleRepository;
         private readonly ISiteRepository _siteRepository;
         private readonly IAdministratorsInRolesRepository _administratorsInRolesRepository;
 
-        public AdministratorsController(IAuthManager authManager, IPathManager pathManager, IDatabaseManager databaseManager, IAdministratorRepository administratorRepository, IRoleRepository roleRepository, ISiteRepository siteRepository, IAdministratorsInRolesRepository administratorsInRolesRepository)
+        public AdministratorsController(IAuthManager authManager, IPathManager pathManager, IDatabaseManager databaseManager, IPluginManager pluginManager, IAdministratorRepository administratorRepository, IRoleRepository roleRepository, ISiteRepository siteRepository, IAdministratorsInRolesRepository administratorsInRolesRepository)
         {
             _authManager = authManager;
             _pathManager = pathManager;
             _databaseManager = databaseManager;
+            _pluginManager = pluginManager;
             _administratorRepository = administratorRepository;
             _roleRepository = roleRepository;
             _siteRepository = siteRepository;
@@ -277,7 +280,7 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Administrators
         }
 
         [HttpPost, Route(RouteImport)]
-        public async Task<ActionResult<ImportResult>> Import([FromBody]ImportRequest request)
+        public async Task<ActionResult<ImportResult>> Import([FromForm] IFormFile file)
         {
             var auth = await _authManager.GetAdminAsync();
             if (!auth.IsAdminLoggin ||
@@ -286,12 +289,12 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Administrators
                 return Unauthorized();
             }
 
-            if (request.File == null)
+            if (file == null)
             {
                 return this.Error("请选择有效的文件上传");
             }
 
-            var fileName = Path.GetFileName(request.File.FileName);
+            var fileName = Path.GetFileName(file.FileName);
 
             var sExt = PathUtils.GetExtension(fileName);
             if (!StringUtils.EqualsIgnoreCase(sExt, ".xlsx"))
@@ -300,8 +303,7 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Administrators
             }
 
             var filePath = _pathManager.GetTemporaryFilesPath(fileName);
-            DirectoryUtils.CreateDirectoryIfNotExists(filePath);
-            request.File.CopyTo(new FileStream(filePath, FileMode.Create));
+            await _pathManager.UploadAsync(file, filePath);
 
             var errorMessage = string.Empty;
             var success = 0;
@@ -370,9 +372,9 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Administrators
             const string fileName = "administrators.csv";
             var filePath = _pathManager.GetTemporaryFilesPath(fileName);
 
-            var excelObject = new ExcelObject(_databaseManager);
+            var excelObject = new ExcelObject(_databaseManager, _pluginManager);
             await excelObject.CreateExcelFileForAdministratorsAsync(filePath);
-            var downloadUrl = PageUtils.GetRootUrlByPhysicalPath(filePath);
+            var downloadUrl = _pathManager.GetRootUrlByPhysicalPath(filePath);
 
             return new StringResult
             {

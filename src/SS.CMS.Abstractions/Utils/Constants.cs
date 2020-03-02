@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-
 
 namespace SS.CMS.Abstractions
 {
@@ -37,6 +35,18 @@ namespace SS.CMS.Abstractions
         public const string ScopeStl = "STL";
 
         public const string PagePlaceHolder = "[SITESERVER_PAGE]";//内容翻页占位符
+
+        public const string RoutePreview = "preview/{siteId}";
+        public const string RoutePreviewChannel = "preview/{siteId}/{channelId}";
+        public const string RoutePreviewContent = "preview/{siteId}/{channelId}/{contentId}";
+        public const string RoutePreviewFile = "preview/{siteId}/file/{fileTemplateId}";
+        public const string RoutePreviewSpecial = "preview/{siteId}/special/{specialId}";
+        public const string RouteActionsDownload = "stl/actions/download";
+        public const string RouteActionsDynamic = "sys/stl/actions/dynamic";
+        public const string RouteRouteActionsIf = "sys/stl/actions/if";
+        public const string RouteActionsPageContents = "sys/stl/actions/pagecontents";
+        public const string RouteActionsSearch = "sys/stl/actions/search";
+        public const string RouteActionsTrigger = "sys/stl/actions/trigger";
 
         public static readonly List<string> ScopeList = new List<string>
         {
@@ -146,8 +156,6 @@ namespace SS.CMS.Abstractions
 
         public static DateTime SqlMinValue { get; } = new DateTime(1754, 1, 1, 0, 0, 0, 0);
 
-        public static Encoding Gb2312 { get; } = Encoding.GetEncoding("gb2312");
-
         public const char PageSeparatorChar = '/';
 
         public const string AdminLogin = "后台管理员登录";
@@ -158,7 +166,7 @@ namespace SS.CMS.Abstractions
         }
 
         public const string ReturnAndNewline = "\r\n";//回车换行
-        public const string Html5Empty = @"<html><head><meta charset=""utf-8""></head><body></body></html>";
+        public const string Html5Empty = @"<html><head><meta charset=""utf-8""><meta http-equiv=""cache-control"" content=""max-age=0"" /><meta http-equiv=""cache-control"" content=""no-cache"" /><meta http-equiv=""expires"" content=""0"" /><meta http-equiv=""expires"" content=""Tue, 01 Jan 1980 1:00:00 GMT"" /><meta http-equiv=""pragma"" content=""no-cache"" /></head><body></body></html>";
 
         public const string Ellipsis = "...";
 

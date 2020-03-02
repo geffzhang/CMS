@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
 using SS.CMS.Abstractions.Dto.Request;
@@ -68,7 +69,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
         }
 
         [HttpPost, Route(RouteUpload)]
-        public async Task<ActionResult<UploadResult>> Upload([FromBody] UploadRequest request)
+        public async Task<ActionResult<UploadResult>> Upload([FromQuery] ChannelRequest request, [FromForm] IFormFile file)
         {
             var auth = await _authManager.GetAdminAsync();
             if (!auth.IsAdminLoggin ||
@@ -82,12 +83,12 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
 
             var site = await _siteRepository.GetAsync(request.SiteId);
 
-            if (request.File == null)
+            if (file == null)
             {
                 return this.Error("请选择有效的文件上传");
             }
 
-            var fileName = Path.GetFileName(request.File.FileName);
+            var fileName = Path.GetFileName(file.FileName);
 
             var extendName = fileName.Substring(fileName.LastIndexOf(".", StringComparison.Ordinal)).ToLower();
             if (!StringUtils.EqualsIgnoreCase(extendName, ".doc") && !StringUtils.EqualsIgnoreCase(extendName, ".docx") && !StringUtils.EqualsIgnoreCase(extendName, ".wps"))
@@ -96,8 +97,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
             }
 
             var filePath = _pathManager.GetTemporaryFilesPath(fileName);
-            DirectoryUtils.CreateDirectoryIfNotExists(filePath);
-            request.File.CopyTo(new FileStream(filePath, FileMode.Create));
+            await _pathManager.UploadAsync(file, filePath);
 
             var url = await _pathManager.GetSiteUrlByPhysicalPathAsync(site, filePath, true);
 
@@ -124,11 +124,11 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
             var site = await _siteRepository.GetAsync(request.SiteId);
             if (site == null) return NotFound();
 
-            var channelInfo = await _channelRepository.GetAsync(request.ChannelId);
-            if (channelInfo == null) return this.Error("无法确定内容对应的栏目");
+            var channel = await _channelRepository.GetAsync(request.ChannelId);
+            if (channel == null) return this.Error("无法确定内容对应的栏目");
 
-            var tableName = await _channelRepository.GetTableNameAsync(site, channelInfo);
-            var styleList = await _tableStyleRepository.GetContentStyleListAsync(channelInfo, tableName);
+            var tableName = _channelRepository.GetTableName(site, channel);
+            var styleList = await _tableStyleRepository.GetContentStyleListAsync(channel, tableName);
             var isChecked = request.CheckedLevel >= site.CheckContentLevel;
 
             var contentIdList = new List<int>();
@@ -145,7 +145,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
 
                 var contentInfo = new Content(dict)
                 {
-                    ChannelId = channelInfo.Id,
+                    ChannelId = channel.Id,
                     SiteId = request.SiteId,
                     AdminId = auth.AdminId,
                     LastEditAdminId = auth.AdminId,
@@ -157,7 +157,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
                 };
 
                 contentInfo.Set(ContentAttribute.Content, content);
-                await _contentRepository.InsertAsync(site, channelInfo, contentInfo);
+                await _contentRepository.InsertAsync(site, channel, contentInfo);
                 contentIdList.Add(contentInfo.Id);
             }
 
@@ -165,9 +165,9 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
             {
                 foreach (var contentId in contentIdList)
                 {
-                    await _createManager.CreateContentAsync(request.SiteId, channelInfo.Id, contentId);
+                    await _createManager.CreateContentAsync(request.SiteId, channel.Id, contentId);
                 }
-                await _createManager.TriggerContentChangedEventAsync(request.SiteId, channelInfo.Id);
+                await _createManager.TriggerContentChangedEventAsync(request.SiteId, channel.Id);
             }
 
             return new ObjectResult<List<int>>

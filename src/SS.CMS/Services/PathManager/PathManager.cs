@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using SS.CMS.Abstractions;
@@ -33,7 +34,10 @@ namespace SS.CMS.Services
 
         //public string ApplicationPath => StringUtils.TrimEnd(_httpContext.Request.PathBase.Value, Constants.ApiPrefix);
 
-        public string ApplicationPath => "/";
+        public string ContentRootPath => _settingsManager.ContentRootPath;
+        public string WebRootPath => _settingsManager.WebRootPath;
+
+        public string WebUrl => "/";
 
         public string GetWebPath(params string[] paths)
         {
@@ -42,22 +46,12 @@ namespace SS.CMS.Services
 
         public string GetWebUrl(params string[] paths)
         {
-            return PageUtils.Combine(ApplicationPath, PageUtils.Combine(paths));
-        }
-
-        public string GetApiUrl(string route)
-        {
-            return PageUtils.Combine(ApplicationPath, Constants.ApiPrefix, route);
-        }
-
-        public string GetAdminPath(params string[] paths)
-        {
-            return PathUtils.Combine(_settingsManager.ContentRootPath, Constants.AdminRootDirectory, PathUtils.Combine(paths));
+            return PageUtils.Combine(WebUrl, PageUtils.Combine(paths));
         }
 
         public string GetAdminUrl(params string[] paths)
         {
-            return PageUtils.Combine("/", ApplicationPath, _settingsManager.AdminDirectory, PageUtils.Combine(paths), "/");
+            return PageUtils.Combine(WebUrl, _settingsManager.AdminDirectory, PageUtils.Combine(paths), "/");
         }
 
         public string GetUploadFileName(string fileName)
@@ -78,9 +72,34 @@ namespace SS.CMS.Services
                 : PageUtils.Combine(await GetWebUrlAsync(site), site.AssetsDir);
         }
 
-        public string GetApiUrl(Config config)
+        public string MapPath(string virtualPath)
         {
-            return config.IsSeparatedApi ? config.SeparatedApiUrl : PageUtils.ParseNavigationUrl("~/api");
+            virtualPath = PathUtils.RemovePathInvalidChar(virtualPath);
+            if (!string.IsNullOrEmpty(virtualPath))
+            {
+                if (virtualPath.StartsWith("~"))
+                {
+                    virtualPath = virtualPath.Substring(1);
+                }
+                virtualPath = PageUtils.Combine("~", virtualPath);
+            }
+            else
+            {
+                virtualPath = "~/";
+            }
+            var rootPath = WebRootPath;
+
+            virtualPath = !string.IsNullOrEmpty(virtualPath) ? virtualPath.Substring(2) : string.Empty;
+            var retVal = PathUtils.Combine(rootPath, virtualPath) ?? string.Empty;
+
+            return retVal.Replace("/", "\\");
+        }
+
+        public async Task UploadAsync(IFormFile file, string filePath)
+        {
+            DirectoryUtils.CreateDirectoryIfNotExists(filePath);
+            using var stream = new FileStream(filePath, FileMode.Create);
+            await file.CopyToAsync(stream);
         }
     }
 }

@@ -316,7 +316,7 @@
         <el-upload
         :drag="true"
         :limit="1"
-        :action="$urlUpload"
+        :action="uploadUrl"
         :auto-upload="true"
         :with-credentials="true"
         :file-list="importUploadList"
@@ -724,5 +724,5 @@
 </el-drawer>
 
 @section Scripts{
-<script src="~/assets/js/cms/../assets/wangEditor/wangEditor.min.js" type="text/javascript"></script>
+<script src="~/assets/lib/wangEditor/wangEditor.min.js" type="text/javascript"></script>
 <script src="~/assets/js/cms/channels.js" type="text/javascript"></script> }

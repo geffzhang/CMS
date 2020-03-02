@@ -2,6 +2,7 @@
 using SS.CMS.Abstractions.Dto.Result;
 using SS.CMS.Web.Extensions;
 using System.Threading.Tasks;
+using SS.CMS.Abstractions;
 
 namespace SS.CMS.Web.Controllers.Admin
 {
@@ -12,11 +13,13 @@ namespace SS.CMS.Web.Controllers.Admin
         {
             if (request.SecurityKey != _settingsManager.SecurityKey) return Unauthorized();
 
-            var (success, errorMessage) = await _databaseManager.InstallAsync(request.UserName, request.AdminPassword, request.Email, request.Mobile);
+            var (success, errorMessage) = await _databaseManager.InstallAsync(_pluginManager, request.UserName, request.AdminPassword, request.Email, request.Mobile);
             if (!success)
             {
                 return this.Error(errorMessage);
             }
+
+            await FileUtils.WriteTextAsync(_pathManager.GetRootPath("index.html"), Constants.Html5Empty);
 
             return new BoolResult
             {

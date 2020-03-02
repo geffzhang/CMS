@@ -12,7 +12,6 @@ using Newtonsoft.Json.Serialization;
 using SS.CMS.Abstractions;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.FileProviders;
-using SS.CMS.Core;
 using SS.CMS.Extensions;
 
 namespace SS.CMS.Web
@@ -38,7 +37,7 @@ namespace SS.CMS.Web
 
             services.Configure<FormOptions>(options =>
             {
-                options.MultipartBodyLengthLimit = 60000000;//60MB
+                options.MultipartBodyLengthLimit = 524288000;//500MB
             });
 
             services.AddCache(settingsManager.Redis.ConnectionString);
@@ -63,15 +62,6 @@ namespace SS.CMS.Web
             }
 
             var settingsManager = provider.GetRequiredService<ISettingsManager>();
-            var errorLogRepository = provider.GetRequiredService<IErrorLogRepository>();
-            var contentRepository = provider.GetRequiredService<IContentRepository>();
-            var pluginRepository = provider.GetRequiredService<IPluginRepository>();
-            var tableStyleRepository = provider.GetRequiredService<ITableStyleRepository>();
-            GlobalSettings.Load(settingsManager,
-                errorLogRepository,
-                contentRepository,
-                pluginRepository,
-                tableStyleRepository);
 
             app.UseExceptionHandler(a => a.Run(async context =>
             {
@@ -99,11 +89,13 @@ namespace SS.CMS.Web
             });
             app.UseStaticFiles();
 
-            app.UseStaticFiles(new StaticFileOptions
+            app.Map("/" + settingsManager.AdminDirectory + "/assets", admin =>
             {
-                FileProvider = new PhysicalFileProvider(
-                    Path.Combine(Directory.GetCurrentDirectory(), $"{Constants.AdminRootDirectory}/assets")),
-                RequestPath = "/" + settingsManager.AdminDirectory + "/assets"
+                admin.UseStaticFiles(new StaticFileOptions
+                {
+                    FileProvider = new PhysicalFileProvider(
+                        Path.Combine(Directory.GetCurrentDirectory(), "assets"))
+                });
             });
 
             app.Map("/" + settingsManager.AdminDirectory, admin =>
@@ -115,10 +107,7 @@ namespace SS.CMS.Web
             app.Map(Constants.ApiPrefix, api =>
             {
                 api.UseRouting();
-
                 api.UseAuthentication();
-                api.UseAuthorization();
-
                 api.UseEndpoints(endpoints => { endpoints.MapControllers(); });
 
                 api.UseOpenApi();

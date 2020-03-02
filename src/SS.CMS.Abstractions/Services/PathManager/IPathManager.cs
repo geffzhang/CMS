@@ -1,19 +1,18 @@
-﻿
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace SS.CMS.Abstractions
 {
     public partial interface IPathManager : IService
     {
-        string ApplicationPath { get; }
+        string ContentRootPath { get; }
+        string WebRootPath { get; }
+
+        string WebUrl { get; }
 
         string GetWebUrl(params string[] paths);
 
         string GetWebPath(params string[] paths);
-
-        string GetApiUrl(string route);
-
-        string GetAdminPath(params string[] paths);
 
         string GetAdminUrl(params string[] paths);
 
@@ -23,6 +22,8 @@ namespace SS.CMS.Abstractions
 
         Task<string> GetAssetsUrlAsync(Site site);
 
-        string GetApiUrl(Config config);
+        string MapPath(string virtualPath);
+
+        Task UploadAsync(IFormFile file, string filePath);
     }
 }

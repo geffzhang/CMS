@@ -2,12 +2,12 @@
 using System.IO;
 using System.Threading.Tasks;
 using Datory;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
 using SS.CMS.Abstractions.Dto;
 using SS.CMS.Abstractions.Dto.Request;
 using SS.CMS.Abstractions.Dto.Result;
-using SS.CMS.Core;
 using SS.CMS.Core.Serialization;
 using SS.CMS.Web.Extensions;
 
@@ -55,7 +55,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Settings
 
             var channel = await _channelRepository.GetAsync(request.ChannelId);
 
-            var tableName = await _channelRepository.GetTableNameAsync(site, channel);
+            var tableName = _channelRepository.GetTableName(site, channel);
             var styles = new List<Style>();
             foreach (var style in await _tableStyleRepository.GetContentStyleListAsync(channel, tableName))
             {
@@ -109,7 +109,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Settings
             if (site == null) return NotFound();
 
             var channel = await _channelRepository.GetAsync(request.ChannelId);
-            var tableName = await _channelRepository.GetTableNameAsync(site, channel);
+            var tableName = _channelRepository.GetTableName(site, channel);
 
             await _tableStyleRepository.DeleteAsync(request.ChannelId, tableName, request.AttributeName);
 
@@ -135,7 +135,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Settings
         }
 
         [HttpPost, Route(RouteImport)]
-        public async Task<ActionResult<BoolResult>> Import([FromBody]ImportRequest request)
+        public async Task<ActionResult<BoolResult>> Import([FromQuery] ImportRequest request, [FromForm] IFormFile file)
         {
             var auth = await _authManager.GetAdminAsync();
             if (!auth.IsAdminLoggin ||
@@ -150,12 +150,12 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Settings
 
             var channel = await _channelRepository.GetAsync(request.ChannelId);
 
-            if (request.File == null)
+            if (file == null)
             {
                 return this.Error("请选择有效的文件上传");
             }
 
-            var fileName = Path.GetFileName(request.File.FileName);
+            var fileName = Path.GetFileName(file.FileName);
 
             var sExt = PathUtils.GetExtension(fileName);
             if (!StringUtils.EqualsIgnoreCase(sExt, ".zip"))
@@ -164,10 +164,9 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Settings
             }
 
             var filePath = _pathManager.GetTemporaryFilesPath(fileName);
-            DirectoryUtils.CreateDirectoryIfNotExists(filePath);
-            request.File.CopyTo(new FileStream(filePath, FileMode.Create));
+            await _pathManager.UploadAsync(file, filePath);
 
-            var tableName = await _channelRepository.GetTableNameAsync(site, channel);
+            var tableName = _channelRepository.GetTableName(site, channel);
 
             var directoryPath = await ImportObject.ImportTableStyleByZipFileAsync(_pathManager, _databaseManager, tableName, _tableStyleRepository.GetRelatedIdentities(channel), filePath);
 
@@ -197,14 +196,14 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Settings
             if (site == null) return NotFound();
 
             var channel = await _channelRepository.GetAsync(request.ChannelId);
-            var tableName = await _channelRepository.GetTableNameAsync(site, channel);
+            var tableName = _channelRepository.GetTableName(site, channel);
 
             var fileName =
                 await ExportObject.ExportRootSingleTableStyleAsync(_pathManager, _databaseManager, request.SiteId, tableName,
                     _tableStyleRepository.GetRelatedIdentities(channel));
 
             var filePath = _pathManager.GetTemporaryFilesPath(fileName);
-            var downloadUrl = PageUtils.GetRootUrlByPhysicalPath(filePath);
+            var downloadUrl = _pathManager.GetRootUrlByPhysicalPath(filePath);
 
             return new StringResult
             {

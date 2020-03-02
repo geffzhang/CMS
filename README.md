@@ -11,7 +11,7 @@ SiteServer CMS 基于 .NET Core，能够以最低的成本、最少的人力投�
 | 版本   | 编译状态                                                                                                                                                              | 版本号                                                         | 发布日期                                                                                     |
 | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | 正式版 | [![Build status](https://ci.appveyor.com/api/projects/status/plx37i94y9gsqkru/branch/master?svg=true)](https://ci.appveyor.com/project/starlying/cms/branch/master)   | ![Nuget version](https://img.shields.io/nuget/v/SS.CMS.svg)    | ![master last commit](https://img.shields.io/github/last-commit/siteserver/cms/master.svg)   |
-| 开发版 | [![Build status](https://ci.appveyor.com/api/projects/status/plx37i94y9gsqkru/branch/staging?svg=true)](https://ci.appveyor.com/project/starlying/cms/branch/staging) | ![Nuget version](https://img.shields.io/nuget/vpre/SS.CMS.svg) | ![staging last commit](https://img.shields.io/github/last-commit/siteserver/cms/staging.svg) |
+| 开发版 | [![Build Status](https://sscms.visualstudio.com/cms/_apis/build/status/siteserver.cms?branchName=staging)](https://sscms.visualstudio.com/cms/_build/latest?definitionId=1&branchName=master) | ![Nuget version](https://img.shields.io/nuget/vpre/SS.CMS.svg) | ![staging last commit](https://img.shields.io/github/last-commit/siteserver/cms/staging.svg) |
 
 ## 迭代计划
 
@@ -69,6 +69,28 @@ SiteServer CMS 基于 .NET Core，能够以最低的成本、最少的人力投�
 ├─src/SS.CMS.Cli               命令行工具
 ├─src/SS.CMS.Web               .NET CORE 控制器
 └─tests                         测试库
+```
+
+## 发布跨平台版本
+
+Window(64位)：
+```
+dotnet publish ./src/SS.CMS.Web/SS.CMS.Web.csproj -r win-x64 --configuration Release -o dist/sscms-win-x64
+```
+
+Window(32位)：
+```
+dotnet publish ./src/SS.CMS.Web/SS.CMS.Web.csproj -r win-x86 --configuration Release -o dist/sscms-win-x86
+```
+
+Linux：
+```
+dotnet publish ./src/SS.CMS.Web/SS.CMS.Web.csproj -r linux-x64 --configuration Release -o dist/sscms-linux-x64
+```
+
+MacOS：
+```
+dotnet publish ./src/SS.CMS.Web/SS.CMS.Web.csproj -r osx-x64 --configuration Release -o dist/sscms-osx-x64
 ```
 
 ## 贡献代码
