@@ -13,9 +13,9 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
         [HttpPost, Route(RouteList)]
         public async Task<ActionResult<ListResult>> List([FromBody] ListRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId,
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId,
                     Constants.SitePermissions.ContentsCheck))
             {
                 return Unauthorized();
@@ -26,7 +26,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
 
             var channel = await _channelRepository.GetAsync(request.SiteId);
 
-            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager);
+            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager, _pathManager);
             var columns = await columnsManager.GetContentListColumnsAsync(site, channel, ColumnsManager.PageType.CheckContents);
 
             var pageContents = new List<Content>();

@@ -6,7 +6,7 @@ using SS.CMS.Abstractions;
 using SS.CMS.Abstractions.Dto;
 using SS.CMS.Abstractions.Dto.Request;
 using SS.CMS.Core;
-using SS.CMS.Web.Extensions;
+using SS.CMS.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
 {
@@ -15,11 +15,11 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
         [HttpPost, Route(RouteList)]
         public async Task<ActionResult<ListResult>> List([FromBody] ListRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId,
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId,
                     Constants.SitePermissions.Contents) ||
-                !await auth.AdminPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,
                     Constants.ChannelPermissions.ContentView,
                     Constants.ChannelPermissions.ContentAdd,
                     Constants.ChannelPermissions.ContentEdit,
@@ -42,9 +42,9 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
             if (channel == null) return this.Error("无法确定内容对应的栏目");
 
             var pluginIds = _pluginManager.GetContentPluginIds(channel);
-            var pluginColumns = await _pluginManager.GetContentColumnsAsync(pluginIds);
+            var pluginColumns = _pluginManager.GetContentColumns(pluginIds);
 
-            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager);
+            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager, _pathManager);
             var columns = await columnsManager.GetContentListColumnsAsync(site, channel, ColumnsManager.PageType.Contents);
 
             var pageContents = new List<Content>();
@@ -82,19 +82,19 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
                 }
             }
 
-            var (isChecked, checkedLevel) = await CheckManager.GetUserCheckLevelAsync(auth.AdminPermissions, site, request.ChannelId);
+            var (isChecked, checkedLevel) = await CheckManager.GetUserCheckLevelAsync(_authManager, site, request.ChannelId);
             var checkedLevels = ElementUtils.GetCheckBoxes(CheckManager.GetCheckedLevels(site, isChecked, checkedLevel, true));
 
             var permissions = new Permissions
             {
-                IsAdd = await auth.AdminPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentAdd),
-                IsDelete = await auth.AdminPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentDelete),
-                IsEdit = await auth.AdminPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentEdit),
-                IsArrange = await auth.AdminPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentArrange),
-                IsTranslate = await auth.AdminPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentTranslate),
-                IsCheck = await auth.AdminPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentCheckLevel1),
-                IsCreate = await auth.AdminPermissions.HasSitePermissionsAsync(site.Id, Constants.SitePermissions.CreateContents) || await auth.AdminPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.CreatePage),
-                IsChannelEdit = await auth.AdminPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ChannelEdit)
+                IsAdd = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentAdd),
+                IsDelete = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentDelete),
+                IsEdit = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentEdit),
+                IsArrange = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentArrange),
+                IsTranslate = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentTranslate),
+                IsCheck = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentCheckLevel1),
+                IsCreate = await _authManager.HasSitePermissionsAsync(site.Id, Constants.SitePermissions.CreateContents) || await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.CreatePage),
+                IsChannelEdit = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ChannelEdit)
             };
 
             return new ListResult

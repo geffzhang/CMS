@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
 using SS.CMS.Abstractions.Dto.Request;
-using SS.CMS.Web.Extensions;
+using SS.CMS.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin.Settings.Administrators
 {
@@ -28,31 +28,32 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Administrators
         [HttpGet, Route(Route)]
         public async Task<ActionResult<ListResult>> GetList()
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsAdministratorsAccessTokens))
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsAdministratorsAccessTokens))
             {
                 return Unauthorized();
             }
 
+            var adminName = await _authManager.GetAdminNameAsync();
             var adminNames = new List<string>();
 
-            if (await auth.AdminPermissions.IsSuperAdminAsync())
+            if (await _authManager.IsSuperAdminAsync())
             {
                 adminNames = await _administratorRepository.GetUserNameListAsync();
             }
             else
             {
-                adminNames.Add(auth.AdminName);
+                adminNames.Add(adminName);
             }
 
             var scopes = new List<string>(Constants.ScopeList);
 
-            foreach (var service in await _pluginManager.GetServicesAsync())
+            foreach (var plugin in _pluginManager.GetPlugins())
             {
-                if (service.IsApiAuthorization)
+                if (plugin.IsApiAuthorization)
                 {
-                    scopes.Add(service.PluginId);
+                    scopes.Add(plugin.PluginId);
                 }
             }
 
@@ -63,16 +64,16 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Administrators
                 Tokens = tokens,
                 AdminNames = adminNames,
                 Scopes = scopes,
-                AdminName = auth.AdminName
+                AdminName = adminName
             };
         }
 
         [HttpDelete, Route(Route)]
         public async Task<ActionResult<TokensResult>> Delete([FromBody]IdRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsAdministratorsAccessTokens))
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsAdministratorsAccessTokens))
             {
                 return Unauthorized();
             }
@@ -89,9 +90,9 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Administrators
         [HttpPost, Route(Route)]
         public async Task<ActionResult<TokensResult>> Submit([FromBody] AccessToken itemObj)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsAdministratorsAccessTokens))
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsAdministratorsAccessTokens))
             {
                 return Unauthorized();
             }
@@ -111,7 +112,7 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Administrators
 
                 await _accessTokenRepository.UpdateAsync(tokenInfo);
 
-                await auth.AddAdminLogAsync("修改API密钥", $"Access Token:{tokenInfo.Title}");
+                await _authManager.AddAdminLogAsync("修改API密钥", $"Access Token:{tokenInfo.Title}");
             }
             else
             {
@@ -129,7 +130,7 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Administrators
 
                 await _accessTokenRepository.InsertAsync(tokenInfo);
 
-                await auth.AddAdminLogAsync("新增API密钥", $"Access Token:{tokenInfo.Title}");
+                await _authManager.AddAdminLogAsync("新增API密钥", $"Access Token:{tokenInfo.Title}");
             }
 
             var list = await _accessTokenRepository.GetAccessTokenListAsync();

@@ -3,7 +3,7 @@ using Datory;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
 using SS.CMS.Core;
-using SS.CMS.Web.Extensions;
+using SS.CMS.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin.Cms.Templates
 {
@@ -67,6 +67,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Templates
 
 			Template template;
 
+            var adminId = await _authManager.GetAdminIdAsync();
 			if (request.Id > 0)
 			{
 				var templateId = request.Id;
@@ -121,7 +122,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Templates
 				template.CreatedFileExtName = request.CreatedFileExtName;
 				template.CreatedFileFullName = request.CreatedFileFullName + request.CreatedFileExtName;
 
-                await _templateRepository.UpdateAsync(_pathManager, site, template, request.Content, _authManager.AdminId);
+				await _templateRepository.UpdateAsync(_pathManager, site, template, request.Content, adminId);
 				if (previousTemplate != null)
 				{
 					FileUtils.DeleteFileIfExists(await _pathManager.GetTemplateFilePathAsync(site, previousTemplate));
@@ -156,7 +157,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Templates
                     DefaultTemplate = false
 				};
 
-				template.Id = await _templateRepository.InsertAsync(_pathManager, site, template, request.Content, _authManager.AdminId);
+				template.Id = await _templateRepository.InsertAsync(_pathManager, site, template, request.Content, adminId);
 				await CreatePagesAsync(template);
 				await _authManager.AddSiteLogAsync(request.SiteId,
 					$"添加{template.TemplateType.GetDisplayName()}",

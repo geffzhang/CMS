@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Datory.Utils;
 using SS.CMS.Abstractions;
-using SS.CMS.Core.Plugins;
+using SS.CMS.Core.PluginImpls;
 
 namespace SS.CMS.Core
 {
@@ -13,12 +13,22 @@ namespace SS.CMS.Core
     {
         private readonly IDatabaseManager _databaseManager;
         private readonly IPluginManager _pluginManager;
+        private readonly IPathManager _pathManager;
 
-        public ColumnsManager(IDatabaseManager databaseManager, IPluginManager pluginManager)
+        public ColumnsManager(IDatabaseManager databaseManager, IPluginManager pluginManager, IPathManager pathManager)
         {
             _databaseManager = databaseManager;
             _pluginManager = pluginManager;
+            _pathManager = pathManager;
         }
+
+        public const string PageContent = nameof(PageContent);
+        public const string NavigationUrl = nameof(NavigationUrl);
+        public const string CheckState = nameof(CheckState);
+        public const string CheckAdminId = nameof(CheckAdminId);//审核人
+        public const string CheckDate = nameof(CheckDate);//审核时间
+        public const string CheckReasons = nameof(CheckReasons);//审核原因
+        public const string TranslateContentType = nameof(TranslateContentType);//转移内容类型
 
         private const string Sequence = nameof(Sequence);                            //序号
         private const string ChannelName = nameof(ChannelName);
@@ -29,6 +39,85 @@ namespace SS.CMS.Core
         private const string SourceName = nameof(SourceName);
         private const string State = nameof(State);
 
+        public static string GetFormatStringAttributeName(string attributeName)
+        {
+            return attributeName + "FormatString";
+        }
+
+        //public static string GetExtendAttributeName(string attributeName)
+        //{
+        //    return attributeName + "_Extend";
+        //}
+
+        public static string GetCountName(string attributeName)
+        {
+            return $"{attributeName}Count";
+        }
+
+        public static string GetExtendName(string attributeName, int n)
+        {
+            return n > 0 ? $"{attributeName}{n}" : attributeName;
+        }
+
+        public static readonly Lazy<List<string>> MetadataAttributes = new Lazy<List<string>>(() => new List<string>
+        {
+            nameof(Content.Id),
+            nameof(Content.Guid),
+            nameof(Content.CreatedDate),
+            nameof(Content.LastModifiedDate),
+            nameof(Content.ChannelId),
+            nameof(Content.SiteId),
+            nameof(Content.AdminId),
+            nameof(Content.LastEditAdminId),
+            nameof(Content.UserId),
+            nameof(Content.Taxis),
+            nameof(Content.GroupNames),
+            nameof(Content.TagNames),
+            nameof(Content.SourceId),
+            nameof(Content.ReferenceId),
+            nameof(Content.Checked),
+            nameof(Content.CheckedLevel),
+            nameof(Content.Hits),
+            nameof(Content.HitsByDay),
+            nameof(Content.HitsByWeek),
+            nameof(Content.HitsByMonth),
+            nameof(Content.LastHitsDate),
+            nameof(Content.Downloads),
+            nameof(Content.Top),
+            nameof(Content.Recommend),
+            nameof(Content.Hot),
+            nameof(Content.Color),
+            nameof(Content.AddDate),
+            nameof(Content.LinkUrl),
+            "ExtendValues"
+        });
+
+
+        public static readonly Lazy<List<string>> DropAttributes = new Lazy<List<string>>(() => new List<string>
+        {
+            "WritingUserName",
+            "ConsumePoint",
+            "Comments",
+            "Reply",
+            "CheckTaskDate",
+            "UnCheckTaskDate",
+            "Photos",
+            "Teleplays",
+            "MemberName",
+            "GroupNameCollection",
+            "Tags",
+            "IsChecked",
+            "SettingsXml",
+            "IsTop",
+            "IsRecommend",
+            "IsHot",
+            "IsColor",
+            "AddUserName",
+            "LastEditUserName",
+            "Content",
+            "LastEditDate"
+        });
+
         private static readonly List<string> CalculatedAttributes = new List<string>
         {
             Sequence,
@@ -37,7 +126,7 @@ namespace SS.CMS.Core
             nameof(Content.AdminId),
             nameof(Content.LastEditAdminId),
             nameof(Content.UserId),
-            nameof(Content.CheckAdminId)
+            CheckAdminId
         };
 
         private static readonly List<string> UnSearchableAttributes = new List<string>
@@ -45,14 +134,13 @@ namespace SS.CMS.Core
             Sequence,
             nameof(Content.ChannelId),
             nameof(Content.AddDate),
-            nameof(Content.LastEditDate),
             nameof(Content.LastHitsDate),
             nameof(Content.GroupNames),
             nameof(Content.TagNames),
             nameof(Content.SourceId),
-            nameof(Content.CheckAdminId),
-            nameof(Content.CheckDate),
-            nameof(Content.CheckReasons),
+            CheckAdminId,
+            CheckDate,
+            CheckReasons,
         };
 
         public static List<TableStyle> GetContentListStyles(List<TableStyle> tableStyleList)
@@ -119,7 +207,7 @@ namespace SS.CMS.Core
                 },
                 new TableStyle
                 {
-                    AttributeName = nameof(Content.LastEditDate),
+                    AttributeName = nameof(Content.LastModifiedDate),
                     DisplayName = "最后修改时间",
                     Taxis = taxis++
                 },
@@ -197,19 +285,19 @@ namespace SS.CMS.Core
                 },
                 new TableStyle
                 {
-                    AttributeName = nameof(Content.CheckAdminId),
+                    AttributeName = CheckAdminId,
                     DisplayName = "审核人",
                     Taxis = taxis++
                 },
                 new TableStyle
                 {
-                    AttributeName = nameof(Content.CheckDate),
+                    AttributeName = CheckDate,
                     DisplayName = "审核时间",
                     Taxis = taxis++
                 },
                 new TableStyle
                 {
-                    AttributeName = nameof(Content.CheckReasons),
+                    AttributeName = CheckReasons,
                     DisplayName = "审核原因",
                     Taxis = taxis
                 },
@@ -222,7 +310,8 @@ namespace SS.CMS.Core
         {
             if (source == null) return null;
 
-            var content = new Content(source.ToDictionary(new List<string> {ContentAttribute.Content}));
+            var channel = await _databaseManager.ChannelRepository.GetAsync(source.ChannelId);
+            var content = await _pathManager.DecodeContentAsync(site, channel, source);
 
             content.Set(State, CheckManager.GetCheckState(site, content));
 
@@ -230,7 +319,11 @@ namespace SS.CMS.Core
             {
                 if (!StringUtils.ContainsIgnoreCase(CalculatedAttributes, column.AttributeName)) continue;
 
-                if (StringUtils.EqualsIgnoreCase(column.AttributeName, Sequence))
+                if (column.InputType == InputType.TextEditor)
+                {
+                    content.Set(column.AttributeName, string.Empty);
+                }
+                else if (StringUtils.EqualsIgnoreCase(column.AttributeName, Sequence))
                 {
                     content.Set(Sequence, sequence);
                 }
@@ -255,10 +348,10 @@ namespace SS.CMS.Core
                     var userName = await _databaseManager.UserRepository.GetDisplayAsync(source.UserId);
                     content.Set(UserName, userName);
                 }
-                else if (StringUtils.EqualsIgnoreCase(column.AttributeName, nameof(Content.CheckAdminId)))
+                else if (StringUtils.EqualsIgnoreCase(column.AttributeName, CheckAdminId))
                 {
                     var checkAdminName =
-                        await _databaseManager.AdministratorRepository.GetDisplayAsync(source.CheckAdminId);
+                        await _databaseManager.AdministratorRepository.GetDisplayAsync(source.Get<int>(CheckAdminId));
                     content.Set(CheckAdminName, checkAdminName);
                 }
                 else if (StringUtils.EqualsIgnoreCase(column.AttributeName, nameof(Content.SourceId)))
@@ -299,6 +392,8 @@ namespace SS.CMS.Core
                     }
                 }
             }
+
+            
 
             return content;
         }
@@ -355,7 +450,7 @@ namespace SS.CMS.Core
             }
 
             var pluginIds = _pluginManager.GetContentPluginIds(channel);
-            var pluginColumns = await _pluginManager.GetContentColumnsAsync(pluginIds);
+            var pluginColumns = _pluginManager.GetContentColumns(pluginIds);
 
             var tableName = _databaseManager.ChannelRepository.GetTableName(site, channel);
             var styleList = GetContentListStyles(await _databaseManager.TableStyleRepository.GetContentStyleListAsync(channel, tableName));
@@ -444,11 +539,11 @@ namespace SS.CMS.Core
                 var inputType = style.InputType;
                 if (inputType == InputType.TextEditor)
                 {
-                    theValue = await ContentUtility.TextEditorContentEncodeAsync(pathManager, site, theValue);
+                    theValue = await pathManager.EncodeTextEditorAsync(site, theValue);
                     theValue = UEditorUtils.TranslateToStlElement(theValue);
                 }
 
-                if (inputType != InputType.TextEditor && inputType != InputType.Image && inputType != InputType.File && inputType != InputType.Video && style.AttributeName != ContentAttribute.LinkUrl)
+                if (inputType != InputType.TextEditor && inputType != InputType.Image && inputType != InputType.File && inputType != InputType.Video && !StringUtils.EqualsIgnoreCase(style.AttributeName, nameof(Content.LinkUrl)))
                 {
                     theValue = AttackUtils.FilterXss(theValue);
                 }
@@ -463,14 +558,14 @@ namespace SS.CMS.Core
                     var formatColor = formCollection[style.AttributeName + "_formatColor"];
                     var theFormatString = ContentUtility.GetTitleFormatString(formatString, formatEm, formatU, formatColor);
 
-                    dict[ContentAttribute.GetFormatStringAttributeName(style.AttributeName)] = theFormatString;
+                    dict[GetFormatStringAttributeName(style.AttributeName)] = theFormatString;
                 }
 
-                if (inputType == InputType.Image || inputType == InputType.File || inputType == InputType.Video)
-                {
-                    var attributeName = ContentAttribute.GetExtendAttributeName(style.AttributeName);
-                    dict[attributeName] = formCollection[attributeName];
-                }
+                //if (inputType == InputType.Image || inputType == InputType.File || inputType == InputType.Video)
+                //{
+                //    var attributeName = GetExtendAttributeName(style.AttributeName);
+                //    dict[attributeName] = formCollection[attributeName];
+                //}
             }
 
             return dict;

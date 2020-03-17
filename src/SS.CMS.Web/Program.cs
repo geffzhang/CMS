@@ -3,6 +3,7 @@ using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Serilog;
 using SS.CMS.Abstractions;
 
 namespace SS.CMS.Web
@@ -20,7 +21,15 @@ namespace SS.CMS.Web
                 .ConfigureAppConfiguration(ConfigConfiguration)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseKestrel((ctx, options) => { options.Limits.MaxRequestBodySize = null; })
+                    webBuilder
+                        //.UseUrls("http://0.0.0.0:80/")
+                        .UseSerilog((hostingContext, loggerConfiguration) =>
+                        {
+                            loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration);
+                            loggerConfiguration.Enrich.FromLogContext();
+                        })
+                        .UseKestrel((ctx, options) => { options.Limits.MaxRequestBodySize = null; })
+                        .UseIIS()
                         .UseStartup<Startup>();
                 });
 

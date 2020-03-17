@@ -12,11 +12,10 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Editor
         [HttpPut, Route(Route)]
         public async Task<ActionResult<BoolResult>> Update([FromBody] SaveRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId,
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId,
                     Constants.SitePermissions.Contents) ||
-                !await auth.AdminPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentEdit))
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentEdit))
             {
                 return Unauthorized();
             }
@@ -27,18 +26,18 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Editor
             var channel = await _channelRepository.GetAsync(request.ChannelId);
             var source = await _contentRepository.GetAsync(site, channel,  request.ContentId);
 
-            var content = request.Content;
+            var adminId = await _authManager.GetAdminIdAsync();
+            var content = await _pathManager.EncodeContentAsync(site, channel, request.Content);
             content.SiteId = site.Id;
             content.ChannelId = channel.Id;
-            content.LastEditAdminId = auth.AdminId;
-            content.LastEditDate = DateTime.Now;
+            content.LastEditAdminId = adminId;
 
             var isChecked = request.Content.CheckedLevel >= site.CheckContentLevel;
             if (isChecked != source.Checked)
             {
-                content.CheckAdminId = auth.AdminId;
-                content.CheckDate = DateTime.Now;
-                content.CheckReasons = string.Empty;
+                content.Set(ColumnsManager.CheckAdminId, adminId);
+                content.Set(ColumnsManager.CheckDate, DateTime.Now);
+                content.Set(ColumnsManager.CheckReasons, string.Empty);
                 content.Checked = isChecked;
                 if (isChecked)
                 {
@@ -50,7 +49,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Editor
                     SiteId = request.SiteId,
                     ChannelId = content.ChannelId,
                     ContentId = content.Id,
-                    AdminId = auth.AdminId,
+                    AdminId = adminId,
                     Checked = content.Checked,
                     CheckedLevel = content.CheckedLevel,
                     CheckDate = DateTime.Now,

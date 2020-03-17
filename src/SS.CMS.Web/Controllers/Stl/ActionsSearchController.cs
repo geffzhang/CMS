@@ -5,10 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
+using SS.CMS.Extensions;
 using SS.CMS.StlParser.StlElement;
 using SS.CMS.StlParser.StlEntity;
 using SS.CMS.StlParser.Utility;
-using SS.CMS.Web.Extensions;
 
 namespace SS.CMS.Web.Controllers.Stl
 {
@@ -59,7 +59,7 @@ namespace SS.CMS.Web.Controllers.Stl
                 var site = await _siteRepository.GetAsync(request.SiteId);
 
                 await _parseManager.InitAsync(site, request.SiteId, 0, templateInfo);
-                _parseManager.PageInfo.User = _authManager.User;
+                _parseManager.PageInfo.User = await _authManager.GetUserAsync();
 
                 var contentBuilder = new StringBuilder(StlRequestEntities.ParseRequestEntities(form, template));
 

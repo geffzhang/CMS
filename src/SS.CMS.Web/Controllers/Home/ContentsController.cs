@@ -16,15 +16,17 @@ namespace SS.CMS.Web.Controllers.Home
         private readonly IAuthManager _authManager;
         private readonly IPluginManager _pluginManager;
         private readonly IDatabaseManager _databaseManager;
+        private readonly IPathManager _pathManager;
         private readonly ISiteRepository _siteRepository;
         private readonly IChannelRepository _channelRepository;
         private readonly IContentRepository _contentRepository;
 
-        public ContentsController(IAuthManager authManager, IPluginManager pluginManager, IDatabaseManager databaseManager, ISiteRepository siteRepository, IChannelRepository channelRepository, IContentRepository contentRepository)
+        public ContentsController(IAuthManager authManager, IPluginManager pluginManager, IDatabaseManager databaseManager, IPathManager pathManager, ISiteRepository siteRepository, IChannelRepository channelRepository, IContentRepository contentRepository)
         {
             _authManager = authManager;
             _pluginManager = pluginManager;
             _databaseManager = databaseManager;
+            _pathManager = pathManager;
             _siteRepository = siteRepository;
             _channelRepository = channelRepository;
             _contentRepository = contentRepository;
@@ -33,9 +35,8 @@ namespace SS.CMS.Web.Controllers.Home
         [HttpGet, Route(Route)]
         public async Task<ActionResult<ListResult>> List([FromQuery]ListRequest request)
         {
-            var auth = await _authManager.GetUserAsync();
-            if (!auth.IsUserLoggin ||
-                !await auth.UserPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentView))
+            if (!await _authManager.IsUserAuthenticatedAsync() ||
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentView))
             {
                 return Unauthorized();
             }
@@ -46,10 +47,10 @@ namespace SS.CMS.Web.Controllers.Home
             var channel = await _channelRepository.GetAsync(request.ChannelId);
             if (channel == null) return NotFound();
 
-            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager);
+            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager, _pathManager);
             var columns = await columnsManager.GetContentListColumnsAsync(site, channel, ColumnsManager.PageType.Contents);
             var pluginIds = _pluginManager.GetContentPluginIds(channel);
-            var pluginColumns = await _pluginManager.GetContentColumnsAsync(pluginIds);
+            var pluginColumns = _pluginManager.GetContentColumns(pluginIds);
 
             var pageContentInfoList = new List<Content>();
             var ccIds = await _contentRepository.GetSummariesAsync(site, channel, true);
@@ -74,15 +75,15 @@ namespace SS.CMS.Web.Controllers.Home
                 }
             }
 
-            var permissions = new Permissions
+            var userPermissions = new Permissions
             {
-                IsAdd = await auth.UserPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentAdd),
-                IsDelete = await auth.UserPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentDelete),
-                IsEdit = await auth.UserPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentEdit),
-                IsTranslate = await auth.UserPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentTranslate),
-                IsCheck = await auth.UserPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentCheckLevel1),
-                IsCreate = await auth.UserPermissions.HasSitePermissionsAsync(site.Id, Constants.SitePermissions.CreateContents) || await auth.UserPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.CreatePage),
-                IsChannelEdit = await auth.UserPermissions.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ChannelEdit)
+                IsAdd = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentAdd),
+                IsDelete = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentDelete),
+                IsEdit = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentEdit),
+                IsTranslate = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentTranslate),
+                IsCheck = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentCheckLevel1),
+                IsCreate = await _authManager.HasSitePermissionsAsync(site.Id, Constants.SitePermissions.CreateContents) || await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.CreatePage),
+                IsChannelEdit = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ChannelEdit)
             };
 
             return new ListResult
@@ -90,7 +91,7 @@ namespace SS.CMS.Web.Controllers.Home
                 Contents = pageContentInfoList,
                 Count = count,
                 Pages = pages,
-                Permissions = permissions,
+                Permissions = userPermissions,
                 Columns = columns
             };
         }

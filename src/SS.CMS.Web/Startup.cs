@@ -52,6 +52,8 @@ namespace SS.CMS.Web
                     options.SerializerSettings.ContractResolver
                         = new CamelCasePropertyNamesContractResolver();
                 });
+
+            services.AddPlugins();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IServiceProvider provider)
@@ -78,7 +80,7 @@ namespace SS.CMS.Web
                 await context.Response.WriteAsync(result);
             }));
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
 
             app.UseDefaultFiles(new DefaultFilesOptions
             {
@@ -118,6 +120,8 @@ namespace SS.CMS.Web
                     options.DocumentPath = "/swagger/v1/swagger.json";
                 });
             });
+
+            app.UsePlugins();
         }
     }
 }

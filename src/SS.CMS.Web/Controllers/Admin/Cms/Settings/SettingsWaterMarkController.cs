@@ -1,13 +1,12 @@
-﻿using System.Drawing.Text;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
 using SS.CMS.Abstractions.Dto.Request;
 using SS.CMS.Abstractions.Dto.Result;
-using SS.CMS.Web.Extensions;
+using SS.CMS.Core;
+using SS.CMS.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin.Cms.Settings
 {
@@ -31,15 +30,15 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Settings
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> GetConfig([FromQuery] SiteRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId, Constants.SitePermissions.ConfigWaterMark))
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId, Constants.SitePermissions.ConfigWaterMark))
             {
                 return Unauthorized();
             }
 
             var site = await _siteRepository.GetAsync(request.SiteId);
-            var families = new InstalledFontCollection().Families.Select(x => x.Name);
+            var families = FontManager.GetFontFamilies();
             var imageUrl = await _pathManager.ParseNavigationUrlAsync(site, site.WaterMarkImagePath, true);
 
             return new GetResult
@@ -53,10 +52,10 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Settings
         [HttpPost, Route(RouteUpload)]
         public async Task<ActionResult<UploadResult>> Upload([FromQuery] SiteRequest request, [FromForm] IFormFile file)
         {
-            var auth = await _authManager.GetAdminAsync();
+            
 
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasChannelPermissionsAsync(request.SiteId, request.SiteId, Constants.SitePermissions.ConfigWaterMark))
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.SiteId, Constants.SitePermissions.ConfigWaterMark))
             {
                 return Unauthorized();
             }
@@ -95,9 +94,9 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Settings
         [HttpPost, Route(Route)]
         public async Task<ActionResult<BoolResult>> Submit([FromBody] SubmitRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId, Constants.SitePermissions.ConfigWaterMark))
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId, Constants.SitePermissions.ConfigWaterMark))
             {
                 return Unauthorized();
             }
@@ -117,7 +116,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Settings
 
             await _siteRepository.UpdateAsync(site);
 
-            await auth.AddSiteLogAsync(request.SiteId, "修改图片水印设置");
+            await _authManager.AddSiteLogAsync(request.SiteId, "修改图片水印设置");
 
             return new BoolResult
             {

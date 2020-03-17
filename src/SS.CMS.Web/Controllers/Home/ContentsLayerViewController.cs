@@ -13,15 +13,17 @@ namespace SS.CMS.Web.Controllers.Home
         private readonly IAuthManager _authManager;
         private readonly IDatabaseManager _databaseManager;
         private readonly IPluginManager _pluginManager;
+        private readonly IPathManager _pathManager;
         private readonly ISiteRepository _siteRepository;
         private readonly IChannelRepository _channelRepository;
         private readonly IContentRepository _contentRepository;
 
-        public ContentsLayerViewController(IAuthManager authManager, IDatabaseManager databaseManager, IPluginManager pluginManager, ISiteRepository siteRepository, IChannelRepository channelRepository, IContentRepository contentRepository)
+        public ContentsLayerViewController(IAuthManager authManager, IDatabaseManager databaseManager, IPluginManager pluginManager, IPathManager pathManager, ISiteRepository siteRepository, IChannelRepository channelRepository, IContentRepository contentRepository)
         {
             _authManager = authManager;
             _databaseManager = databaseManager;
             _pluginManager = pluginManager;
+            _pathManager = pathManager;
             _siteRepository = siteRepository;
             _channelRepository = channelRepository;
             _contentRepository = contentRepository;
@@ -30,9 +32,8 @@ namespace SS.CMS.Web.Controllers.Home
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery]GetRequest request)
         {
-            var auth = await _authManager.GetUserAsync();
-            if (!auth.IsUserLoggin ||
-                !await auth.UserPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentView))
+            if (!await _authManager.IsUserAuthenticatedAsync() ||
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentView))
             {
                 return Unauthorized();
             }
@@ -46,11 +47,11 @@ namespace SS.CMS.Web.Controllers.Home
             var content = await _contentRepository.GetAsync(site, channel, request.ContentId);
             if (content == null) return NotFound();
 
-            content.Set(ContentAttribute.CheckState, CheckManager.GetCheckState(site, content));
+            content.Set(ColumnsManager.CheckState, CheckManager.GetCheckState(site, content));
 
             var channelName = await _channelRepository.GetChannelNameNavigationAsync(request.SiteId, request.ChannelId);
 
-            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager);
+            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager, _pathManager);
             var attributes = await columnsManager.GetContentListColumnsAsync(site, channel, ColumnsManager.PageType.Contents);
 
             return new GetResult

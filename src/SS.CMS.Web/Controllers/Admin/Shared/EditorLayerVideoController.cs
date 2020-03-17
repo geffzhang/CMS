@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
 using SS.CMS.Abstractions.Dto.Request;
-using SS.CMS.Web.Extensions;
+using SS.CMS.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin.Shared
 {
@@ -28,8 +28,8 @@ namespace SS.CMS.Web.Controllers.Admin.Shared
         [HttpPost, Route(RouteUploadVideo)]
         public async Task<ActionResult<UploadResult>> UploadVideo([FromQuery] SiteRequest request, [FromForm] IFormFile file)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin) return Unauthorized();
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync()) return Unauthorized();
 
             var site = await _siteRepository.GetAsync(request.SiteId);
 
@@ -63,8 +63,8 @@ namespace SS.CMS.Web.Controllers.Admin.Shared
         [HttpPost, Route(RouteUploadImage)]
         public async Task<ActionResult<UploadResult>> UploadImage([FromQuery] SiteRequest request, [FromForm] IFormFile file)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin) return Unauthorized();
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync()) return Unauthorized();
 
             var site = await _siteRepository.GetAsync(request.SiteId);
 

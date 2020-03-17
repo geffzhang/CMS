@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
-using SS.CMS.Web.Extensions;
+using SS.CMS.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin.Cms.Templates
 {
@@ -27,9 +27,9 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Templates
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery]GetRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId,
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId,
                     Constants.SitePermissions.Specials))
             {
                 return Unauthorized();

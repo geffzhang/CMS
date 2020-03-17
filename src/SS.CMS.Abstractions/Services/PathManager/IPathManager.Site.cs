@@ -7,10 +7,9 @@ namespace SS.CMS.Abstractions
 {
     partial interface IPathManager
     {
-        // 系统根目录访问地址
-        string GetRootUrl(string relatedUrl);
+        string GetWebRootUrl(params string[] paths);
 
-        string GetRootPath(params string[] paths);
+        string GetWebRootPath(params string[] paths);
 
         string GetAdminUrl(string relatedUrl);
 

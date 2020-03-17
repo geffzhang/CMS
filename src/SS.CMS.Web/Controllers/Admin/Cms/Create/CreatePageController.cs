@@ -33,7 +33,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Create
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery] GetRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
+            
 
             var permission = string.Empty;
             if (request.Type == CreateType.Index)
@@ -53,8 +53,8 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Create
                 permission = Constants.SitePermissions.CreateAll;
             }
 
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId, permission))
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId, permission))
             {
                 return Unauthorized();
             }
@@ -93,7 +93,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Create
         [HttpPost, Route(Route)]
         public async Task<ActionResult<BoolResult>> Create([FromBody] CreateRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
+            
 
             var permission = string.Empty;
             if (request.Type == CreateType.Index)
@@ -113,8 +113,8 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Create
                 permission = Constants.SitePermissions.CreateAll;
             }
 
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId, permission))
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId, permission))
             {
                 return Unauthorized();
             }
@@ -157,7 +157,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Create
             {
                 if (request.Scope == "1month")
                 {
-                    var lastEditList = await _contentRepository.GetChannelIdsCheckedByLastEditDateHourAsync(site, 720);
+                    var lastEditList = await _contentRepository.GetChannelIdsCheckedByLastModifiedDateHourAsync(site, 720);
                     foreach (var channelId in lastEditList)
                     {
                         if (selectedChannelIdList.Contains(channelId))
@@ -168,7 +168,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Create
                 }
                 else if (request.Scope == "1day")
                 {
-                    var lastEditList = await _contentRepository.GetChannelIdsCheckedByLastEditDateHourAsync(site, 24);
+                    var lastEditList = await _contentRepository.GetChannelIdsCheckedByLastModifiedDateHourAsync(site, 24);
                     foreach (var channelId in lastEditList)
                     {
                         if (selectedChannelIdList.Contains(channelId))
@@ -179,7 +179,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Create
                 }
                 else if (request.Scope == "2hours")
                 {
-                    var lastEditList = await _contentRepository.GetChannelIdsCheckedByLastEditDateHourAsync(site, 2);
+                    var lastEditList = await _contentRepository.GetChannelIdsCheckedByLastModifiedDateHourAsync(site, 2);
                     foreach (var channelId in lastEditList)
                     {
                         if (selectedChannelIdList.Contains(channelId))
@@ -215,9 +215,9 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Create
         [HttpPost, Route(RouteAll)]
         public async Task<ActionResult<BoolResult>> CreateAll([FromBody] SiteRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId, Constants.SitePermissions.CreateAll))
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId, Constants.SitePermissions.CreateAll))
             {
                 return Unauthorized();
             }

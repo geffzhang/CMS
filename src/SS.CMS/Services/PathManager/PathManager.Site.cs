@@ -13,15 +13,19 @@ namespace SS.CMS.Services
     public partial class PathManager
     {
         // 系统根目录访问地址
-        public string GetRootUrl(string relatedUrl)
+        public string GetWebRootUrl(params string[] paths)
         {
-            return PageUtils.Combine(WebUrl, relatedUrl);
+            return PageUtils.Combine(WebUrl, PathUtils.Combine(paths));
         }
 
-        public string GetRootPath(params string[] paths)
+        public string GetWebRootPath(params string[] paths)
         {
-            var path = PathUtils.Combine(_settingsManager.WebRootPath, PathUtils.Combine(paths));
-            return path;
+            return PathUtils.Combine(_settingsManager.WebRootPath, PathUtils.Combine(paths));
+        }
+
+        public string GetContentRootPath(params string[] paths)
+        {
+            return PathUtils.Combine(_settingsManager.ContentRootPath, PathUtils.Combine(paths));
         }
 
         public string GetAdminUrl(string relatedUrl)
@@ -44,30 +48,11 @@ namespace SS.CMS.Services
             return PageUtils.Combine(WebUrl, DirectoryUtils.SiteFiles.DirectoryName, DirectoryUtils.SiteTemplates.DirectoryName, relatedUrl);
         }
 
-        public string ParsePluginUrl(string pluginId, string url)
-        {
-            if (string.IsNullOrEmpty(url)) return string.Empty;
-
-            if (PageUtils.IsProtocolUrl(url)) return url;
-
-            if (StringUtils.StartsWith(url, "~/"))
-            {
-                return GetRootUrl(url.Substring(1));
-            }
-
-            if (StringUtils.StartsWith(url, "@/"))
-            {
-                return GetAdminUrl(url.Substring(1));
-            }
-
-            return GetSiteFilesUrl(PageUtils.Combine(DirectoryUtils.SiteFiles.Plugins, pluginId, url));
-        }
-
         public string GetRootUrlByPhysicalPath(string physicalPath)
         {
             var requestPath = PathUtils.GetPathDifference(_settingsManager.WebRootPath, physicalPath);
-            requestPath = requestPath.Replace(PathUtils.SeparatorChar, Constants.PageSeparatorChar);
-            return GetRootUrl(requestPath);
+            requestPath = requestPath.Replace(PathUtils.SeparatorChar, PageUtils.SeparatorChar);
+            return GetWebRootUrl(requestPath);
         }
 
         public string ParseNavigationUrl(string url)
@@ -75,7 +60,7 @@ namespace SS.CMS.Services
             if (string.IsNullOrEmpty(url)) return string.Empty;
 
             url = url.StartsWith("~") ? PageUtils.Combine(WebUrl, url.Substring(1)) : url;
-            url = url.Replace(PathUtils.SeparatorChar, Constants.PageSeparatorChar);
+            url = url.Replace(PathUtils.SeparatorChar, PageUtils.SeparatorChar);
             return url;
         }
 
@@ -139,7 +124,7 @@ namespace SS.CMS.Services
 
             if (string.IsNullOrEmpty(requestPath)) return url;
 
-            requestPath = requestPath.Replace(PathUtils.SeparatorChar, Constants.PageSeparatorChar);
+            requestPath = requestPath.Replace(PathUtils.SeparatorChar, PageUtils.SeparatorChar);
             requestPath = PathUtils.RemovePathInvalidChar(requestPath);
             if (requestPath.StartsWith("/"))
             {
@@ -187,7 +172,7 @@ namespace SS.CMS.Services
 
             if (string.IsNullOrEmpty(requestPath)) return url;
 
-            requestPath = requestPath.Replace(PathUtils.SeparatorChar, Constants.PageSeparatorChar);
+            requestPath = requestPath.Replace(PathUtils.SeparatorChar, PageUtils.SeparatorChar);
             requestPath = PathUtils.RemovePathInvalidChar(requestPath);
             if (requestPath.StartsWith("/"))
             {
@@ -297,7 +282,7 @@ namespace SS.CMS.Services
             var referenceId = contentCurrent.ReferenceId;
             var linkUrl = contentCurrent.LinkUrl;
             var channelId = contentCurrent.ChannelId;
-            if (referenceId > 0 && TranslateContentType.ReferenceContent == contentCurrent.TranslateContentType)
+            if (referenceId > 0 && TranslateContentType.ReferenceContent.GetValue() == contentCurrent.Get<string>(ColumnsManager.TranslateContentType))
             {
                 if (sourceId > 0 && await _channelRepository.IsExistsAsync(sourceId))
                 {
@@ -353,7 +338,7 @@ namespace SS.CMS.Services
 
             var contentInfoCurrent = await _contentRepository.GetAsync(site, channelId, contentId);
 
-            if (referenceId > 0 && TranslateContentType.ReferenceContent == contentInfoCurrent.TranslateContentType)
+            if (referenceId > 0 && TranslateContentType.ReferenceContent.GetValue() == contentInfoCurrent.Get<string>(ColumnsManager.TranslateContentType))
             {
                 if (sourceId > 0 && await _channelRepository.IsExistsAsync(sourceId))
                 {
@@ -437,14 +422,14 @@ namespace SS.CMS.Services
 
             if (channel.ParentId == 0)
             {
-                url = await GetChannelUrlNotComputedAsync(site, channel.Id, isLocal);
+                url = await GetChannelUrlNotComputedAsync(site, channel.Id, false);
             }
             else
             {
                 var linkType = channel.LinkType;
                 if (linkType == LinkType.None)
                 {
-                    url = await GetChannelUrlNotComputedAsync(site, channel.Id, isLocal);
+                    url = await GetChannelUrlNotComputedAsync(site, channel.Id, false);
                 }
                 else if (linkType == LinkType.NoLink)
                 {
@@ -455,7 +440,7 @@ namespace SS.CMS.Services
                     if (linkType == LinkType.NoLinkIfContentNotExists)
                     {
                         var count = await _contentRepository.GetCountAsync(site, channel);
-                        url = count == 0 ? PageUtils.UnClickableUrl : await GetChannelUrlNotComputedAsync(site, channel.Id, isLocal);
+                        url = count == 0 ? PageUtils.UnClickableUrl : await GetChannelUrlNotComputedAsync(site, channel.Id, false);
                     }
                     else if (linkType == LinkType.LinkToOnlyOneContent)
                     {
@@ -464,11 +449,11 @@ namespace SS.CMS.Services
                         {
                             var tableName = _channelRepository.GetTableName(site, channel);
                             var contentId = _contentRepository.GetContentId(tableName, channel.Id, true, ETaxisTypeUtils.GetContentOrderByString(channel.DefaultTaxisType));
-                            url = await GetContentUrlAsync(site, channel, contentId, isLocal);
+                            url = await GetContentUrlAsync(site, channel, contentId, false);
                         }
                         else
                         {
-                            url = await GetChannelUrlNotComputedAsync(site, channel.Id, isLocal);
+                            url = await GetChannelUrlNotComputedAsync(site, channel.Id, false);
                         }
                     }
                     else if (linkType == LinkType.NoLinkIfContentNotExistsAndLinkToOnlyOneContent)
@@ -482,11 +467,11 @@ namespace SS.CMS.Services
                         {
                             var tableName = _channelRepository.GetTableName(site, channel);
                             var contentId = _contentRepository.GetContentId(tableName, channel.Id, true, ETaxisTypeUtils.GetContentOrderByString(channel.DefaultTaxisType));
-                            url = await GetContentUrlAsync(site, channel, contentId, isLocal);
+                            url = await GetContentUrlAsync(site, channel, contentId, false);
                         }
                         else
                         {
-                            url = await GetChannelUrlNotComputedAsync(site, channel.Id, isLocal);
+                            url = await GetChannelUrlNotComputedAsync(site, channel.Id, false);
                         }
                     }
                     else if (linkType == LinkType.LinkToFirstContent)
@@ -496,11 +481,11 @@ namespace SS.CMS.Services
                         {
                             var tableName = _channelRepository.GetTableName(site, channel);
                             var contentId = _contentRepository.GetContentId(tableName, channel.Id, true, ETaxisTypeUtils.GetContentOrderByString(channel.DefaultTaxisType));
-                            url = await GetContentUrlAsync(site, channel, contentId, isLocal);
+                            url = await GetContentUrlAsync(site, channel, contentId, false);
                         }
                         else
                         {
-                            url = await GetChannelUrlNotComputedAsync(site, channel.Id, isLocal);
+                            url = await GetChannelUrlNotComputedAsync(site, channel.Id, false);
                         }
                     }
                     else if (linkType == LinkType.NoLinkIfContentNotExistsAndLinkToFirstContent)
@@ -510,7 +495,7 @@ namespace SS.CMS.Services
                         {
                             var tableName = _channelRepository.GetTableName(site, channel);
                             var contentId = _contentRepository.GetContentId(tableName, channel.Id, true, ETaxisTypeUtils.GetContentOrderByString(channel.DefaultTaxisType));
-                            url = await GetContentUrlAsync(site, channel, contentId, isLocal);
+                            url = await GetContentUrlAsync(site, channel, contentId, false);
                         }
                         else
                         {
@@ -519,27 +504,27 @@ namespace SS.CMS.Services
                     }
                     else if (linkType == LinkType.NoLinkIfChannelNotExists)
                     {
-                        url = channel.ChildrenCount == 0 ? PageUtils.UnClickableUrl : await GetChannelUrlNotComputedAsync(site, channel.Id, isLocal);
+                        url = channel.ChildrenCount == 0 ? PageUtils.UnClickableUrl : await GetChannelUrlNotComputedAsync(site, channel.Id, false);
                     }
                     else if (linkType == LinkType.LinkToLastAddChannel)
                     {
                         var lastAddChannelInfo = await _channelRepository.GetChannelByLastAddDateAsyncTask(site.Id, channel.Id);
-                        url = lastAddChannelInfo != null ? await GetChannelUrlAsync(site, lastAddChannelInfo, isLocal) : await GetChannelUrlNotComputedAsync(site, channel.Id, isLocal);
+                        url = lastAddChannelInfo != null ? await GetChannelUrlAsync(site, lastAddChannelInfo, false) : await GetChannelUrlNotComputedAsync(site, channel.Id, false);
                     }
                     else if (linkType == LinkType.LinkToFirstChannel)
                     {
                         var firstChannelInfo = await _channelRepository.GetChannelByTaxisAsync(site.Id, channel.Id);
-                        url = firstChannelInfo != null ? await GetChannelUrlAsync(site, firstChannelInfo, isLocal) : await GetChannelUrlNotComputedAsync(site, channel.Id, isLocal);
+                        url = firstChannelInfo != null ? await GetChannelUrlAsync(site, firstChannelInfo, false) : await GetChannelUrlNotComputedAsync(site, channel.Id, false);
                     }
                     else if (linkType == LinkType.NoLinkIfChannelNotExistsAndLinkToLastAddChannel)
                     {
                         var lastAddChannelInfo = await _channelRepository.GetChannelByLastAddDateAsyncTask(site.Id, channel.Id);
-                        url = lastAddChannelInfo != null ? await GetChannelUrlAsync(site, lastAddChannelInfo, isLocal) : PageUtils.UnClickableUrl;
+                        url = lastAddChannelInfo != null ? await GetChannelUrlAsync(site, lastAddChannelInfo, false) : PageUtils.UnClickableUrl;
                     }
                     else if (linkType == LinkType.NoLinkIfChannelNotExistsAndLinkToFirstChannel)
                     {
                         var firstChannelInfo = await _channelRepository.GetChannelByTaxisAsync(site.Id, channel.Id);
-                        url = firstChannelInfo != null ? await GetChannelUrlAsync(site, firstChannelInfo, isLocal) : PageUtils.UnClickableUrl;
+                        url = firstChannelInfo != null ? await GetChannelUrlAsync(site, firstChannelInfo, false) : PageUtils.UnClickableUrl;
                     }
                 }
             }
@@ -678,7 +663,7 @@ namespace SS.CMS.Services
 
             foreach (var t in paths)
             {
-                var path = t?.Replace(Constants.PageSeparatorChar, PathUtils.SeparatorChar).Trim(PathUtils.SeparatorChar) ?? string.Empty;
+                var path = t?.Replace(PageUtils.SeparatorChar, PathUtils.SeparatorChar).Trim(PathUtils.SeparatorChar) ?? string.Empty;
                 sitePath = PathUtils.Combine(sitePath, path);
             }
             return sitePath;
@@ -1444,8 +1429,7 @@ namespace SS.CMS.Services
 
         public bool IsSystemDirectory(string directoryName)
         {
-            if (StringUtils.EqualsIgnoreCase(directoryName, DirectoryUtils.AspnetClient.DirectoryName)
-                || StringUtils.EqualsIgnoreCase(directoryName, DirectoryUtils.Bin.DirectoryName)
+            if (StringUtils.EqualsIgnoreCase(directoryName, DirectoryUtils.Bin.DirectoryName)
                 || StringUtils.EqualsIgnoreCase(directoryName, DirectoryUtils.Home.DirectoryName)
                 || StringUtils.EqualsIgnoreCase(directoryName, DirectoryUtils.SiteFiles.DirectoryName))
             {

@@ -39,11 +39,11 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery] GetRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId,
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId,
                     Constants.SitePermissions.Contents) ||
-                !await auth.AdminPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,
                     Constants.ChannelPermissions.ContentView))
             {
                 return Unauthorized();
@@ -58,13 +58,13 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
 
             var channelName = await _channelRepository.GetChannelNameNavigationAsync(request.SiteId, request.ChannelId);
 
-            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager);
+            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager, _pathManager);
 
             var columns = await columnsManager.GetContentListColumnsAsync(site, channel, ColumnsManager.PageType.Contents);
 
             var calculatedContent =
                 await columnsManager.CalculateContentListAsync(1, site, request.ChannelId, content, columns, null);
-            calculatedContent.Set(ContentAttribute.Content, content.Get(ContentAttribute.Content));
+            calculatedContent.Body = content.Body;
 
             var siteUrl = await _pathManager.GetSiteUrlAsync(site, true);
             var groupNames = await _contentGroupRepository.GetGroupNamesAsync(request.SiteId);

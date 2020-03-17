@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
-using SS.CMS.Web.Extensions;
+using SS.CMS.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin.Shared
 {
@@ -26,8 +26,8 @@ namespace SS.CMS.Web.Controllers.Admin.Shared
         [HttpPost, Route(RouteUpload)]
         public async Task<ActionResult<UploadResult>> Upload([FromQuery] UploadRequest request, [FromForm] IFormFile file)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin) return Unauthorized();
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync()) return Unauthorized();
 
             var site = await _siteRepository.GetAsync(request.SiteId);
 

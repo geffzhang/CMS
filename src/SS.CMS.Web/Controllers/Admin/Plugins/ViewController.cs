@@ -1,13 +1,14 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
+using SS.CMS.Packaging;
 
 namespace SS.CMS.Web.Controllers.Admin.Plugins
 {
     [Route("admin/plugins/view")]
     public partial class ViewController : ControllerBase
     {
-        private const string Route = "{pluginId}";
+        private const string Route = "";
 
         private readonly ISettingsManager _settingsManager;
         private readonly IAuthManager _authManager;
@@ -21,16 +22,17 @@ namespace SS.CMS.Web.Controllers.Admin.Plugins
         }
 
         [HttpGet, Route(Route)]
-        public async Task<ActionResult<GetResult>> Get(string pluginId)
+        public async Task<ActionResult<GetResult>> Get([FromQuery] string pluginId)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSystemPermissionsAsync(Constants.AppPermissions.PluginsManagement))
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.PluginsManagement))
             {
                 return Unauthorized();
             }
 
-            var plugin = await _pluginManager.GetPluginAsync(pluginId);
+            var plugin = _pluginManager.GetPlugin(pluginId);
+            var metadata = new PackageMetadata(plugin);
 
             return new GetResult
             {
@@ -38,7 +40,7 @@ namespace SS.CMS.Web.Controllers.Admin.Plugins
                 PluginVersion = _settingsManager.PluginVersion,
                 Installed = plugin != null,
                 InstalledVersion = plugin != null ? plugin.Version : string.Empty,
-                Package = plugin
+                Package = metadata
             };
         }
     }

@@ -8,7 +8,7 @@ using SS.CMS.Abstractions.Dto.Request;
 using SS.CMS.Core;
 using SS.CMS.Core.Office;
 using SS.CMS.Core.Serialization;
-using SS.CMS.Web.Extensions;
+using SS.CMS.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
 {
@@ -39,9 +39,9 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery] ChannelRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentView))
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentView))
             {
                 return Unauthorized();
             }
@@ -52,10 +52,10 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
             var channel = await _channelRepository.GetAsync(request.ChannelId);
             if (channel == null) return this.Error("无法确定内容对应的栏目");
 
-            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager);
+            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager, _pathManager);
             var columns = await columnsManager.GetContentListColumnsAsync(site, channel, ColumnsManager.PageType.Contents);
 
-            var (isChecked, checkedLevel) = await CheckManager.GetUserCheckLevelAsync(auth.AdminPermissions, site, request.SiteId);
+            var (isChecked, checkedLevel) = await CheckManager.GetUserCheckLevelAsync(_authManager, site, request.SiteId);
             var checkedLevels = CheckManager.GetCheckedLevels(site, isChecked, checkedLevel, true);
 
             return new GetResult
@@ -69,9 +69,9 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
         [HttpPost, Route(Route)]
         public async Task<ActionResult<SubmitResult>> Submit([FromBody] SubmitRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ChannelEdit))
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ChannelEdit))
             {
                 return Unauthorized();
             }
@@ -84,10 +84,10 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
             var channel = await _channelRepository.GetAsync(request.ChannelId);
             if (channel == null) return this.Error("无法确定内容对应的栏目");
 
-            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager);
+            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager, _pathManager);
             var columns = await columnsManager.GetContentListColumnsAsync(site, channel, ColumnsManager.PageType.Contents);
             var pluginIds = _pluginManager.GetContentPluginIds(channel);
-            var pluginColumns = await _pluginManager.GetContentColumnsAsync(pluginIds);
+            var pluginColumns = _pluginManager.GetContentColumns(pluginIds);
 
             var contentInfoList = new List<Content>();
             var calculatedContentInfoList = new List<Content>();
@@ -185,7 +185,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
                     var filePath = _pathManager.GetTemporaryFilesPath(fileName);
                     var exportObject = new ExportObject(_pathManager, _databaseManager, _pluginManager, site);
                     contentInfoList.Reverse();
-                    if (exportObject.ExportContents(filePath, contentInfoList))
+                    if (await exportObject.ExportContentsAsync(filePath, contentInfoList))
                     {
                         downloadUrl = _pathManager.GetTemporaryFilesUrl(fileName);
                     }
@@ -197,7 +197,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
                     var fileName = $"{channel.ChannelName}.csv";
                     var filePath = _pathManager.GetTemporaryFilesPath(fileName);
 
-                    var excelObject = new ExcelObject(_databaseManager, _pluginManager);
+                    var excelObject = new ExcelObject(_databaseManager, _pluginManager, _pathManager);
                     await excelObject.CreateExcelFileForContentsAsync(filePath, site, channel, calculatedContentInfoList, exportColumnNames);
                     downloadUrl = _pathManager.GetTemporaryFilesUrl(fileName);
                 }

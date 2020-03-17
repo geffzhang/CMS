@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
 using SS.CMS.Core;
-using SS.CMS.Web.Extensions;
+using SS.CMS.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin.Settings.Sites
 {
@@ -34,9 +34,9 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Sites
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get()
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSites))
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSites))
             {
                 return Unauthorized();
             }
@@ -82,9 +82,9 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Sites
         [HttpDelete, Route(Route)]
         public async Task<ActionResult<SitesResult>> Delete([FromBody]DeleteRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSites))
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSites))
             {
                 return Unauthorized();
             }
@@ -103,7 +103,7 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Sites
             {
                 await _pathManager.DeleteSiteFilesAsync(site);
             }
-            await auth.AddAdminLogAsync("删除站点", $"站点:{site.SiteName}");
+            await _authManager.AddAdminLogAsync("删除站点", $"站点:{site.SiteName}");
             await _siteRepository.DeleteAsync(request.SiteId);
 
             var siteIdList = await _siteRepository.GetSiteIdListAsync(0);
@@ -126,9 +126,9 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Sites
         [HttpPut, Route(Route)]
         public async Task<ActionResult<SitesResult>> Edit([FromBody]EditRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSites))
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSites))
             {
                 return Unauthorized();
             }
@@ -151,11 +151,11 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Sites
                 tableName = request.TableHandWrite;
                 if (!await _settingsManager.Database.IsTableExistsAsync(tableName))
                 {
-                    await _contentRepository.CreateContentTableAsync(tableName, _contentRepository.GetDefaultTableColumns(tableName));
+                    await _contentRepository.CreateContentTableAsync(tableName, _contentRepository.GetTableColumns(tableName));
                 }
                 else
                 {
-                    await _settingsManager.Database.AlterTableAsync(tableName, _contentRepository.GetDefaultTableColumns(tableName));
+                    await _settingsManager.Database.AlterTableAsync(tableName, _contentRepository.GetTableColumns(tableName));
                 }
             }
 
@@ -200,7 +200,7 @@ namespace SS.CMS.Web.Controllers.Admin.Settings.Sites
 
             await _siteRepository.UpdateAsync(site);
 
-            await auth.AddAdminLogAsync("修改站点属性", $"站点:{site.SiteName}");
+            await _authManager.AddAdminLogAsync("修改站点属性", $"站点:{site.SiteName}");
 
             var siteIdList = await _siteRepository.GetSiteIdListAsync(0);
             var sites = new List<Site>();

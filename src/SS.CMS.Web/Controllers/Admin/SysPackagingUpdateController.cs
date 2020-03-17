@@ -3,8 +3,8 @@ using Datory;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
 using SS.CMS.Abstractions.Dto.Result;
+using SS.CMS.Extensions;
 using SS.CMS.Packaging;
-using SS.CMS.Web.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin
 {
@@ -24,9 +24,9 @@ namespace SS.CMS.Web.Controllers.Admin
         [HttpPost, Route(Route)]
         public async Task<ActionResult<BoolResult>> Submit([FromBody]SubmitRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
+            
 
-            if (!auth.IsAdminLoggin)
+            if (!await _authManager.IsAdminAuthenticatedAsync())
             {
                 return Unauthorized();
             }

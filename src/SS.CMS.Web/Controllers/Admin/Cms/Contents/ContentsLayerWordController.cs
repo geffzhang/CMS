@@ -10,7 +10,7 @@ using SS.CMS.Abstractions.Dto.Request;
 using SS.CMS.Abstractions.Dto.Result;
 using SS.CMS.Core;
 using SS.CMS.Core.Office;
-using SS.CMS.Web.Extensions;
+using SS.CMS.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
 {
@@ -42,11 +42,11 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery] ChannelRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId,
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId,
                     Constants.SitePermissions.Contents) ||
-                !await auth.AdminPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,
                     Constants.ChannelPermissions.ContentAdd))
             {
                 return Unauthorized();
@@ -58,7 +58,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
             var channelInfo = await _channelRepository.GetAsync(request.ChannelId);
             if (channelInfo == null) return this.Error("无法确定内容对应的栏目");
 
-            var (isChecked, checkedLevel) = await CheckManager.GetUserCheckLevelAsync(auth.AdminPermissions, site, request.SiteId);
+            var (isChecked, checkedLevel) = await CheckManager.GetUserCheckLevelAsync(_authManager, site, request.SiteId);
             var checkedLevels = CheckManager.GetCheckedLevels(site, isChecked, checkedLevel, false);
 
             return new GetResult
@@ -71,11 +71,11 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
         [HttpPost, Route(RouteUpload)]
         public async Task<ActionResult<UploadResult>> Upload([FromQuery] ChannelRequest request, [FromForm] IFormFile file)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId,
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId,
                     Constants.SitePermissions.Contents) ||
-                !await auth.AdminPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,
                     Constants.ChannelPermissions.ContentAdd))
             {
                 return Unauthorized();
@@ -111,11 +111,11 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
         [HttpPost, Route(Route)]
         public async Task<ActionResult<ObjectResult<List<int>>>> Submit([FromBody] SubmitRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId,
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId,
                     Constants.SitePermissions.Contents) ||
-                !await auth.AdminPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,
                     Constants.ChannelPermissions.ContentAdd))
             {
                 return Unauthorized();
@@ -131,32 +131,34 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
             var styleList = await _tableStyleRepository.GetContentStyleListAsync(channel, tableName);
             var isChecked = request.CheckedLevel >= site.CheckContentLevel;
 
+            var adminId = await _authManager.GetAdminIdAsync();
             var contentIdList = new List<int>();
             foreach (var fileName in request.FileNames)
             {
                 if (string.IsNullOrEmpty(fileName)) continue;
 
                 var filePath = _pathManager.GetTemporaryFilesPath(fileName);
-                var (title, content) = await WordManager.GetWordAsync(_pathManager, site, request.IsFirstLineTitle, request.IsClearFormat, request.IsFirstLineIndent, request.IsClearFontSize, request.IsClearFontFamily, request.IsClearImages, filePath);
+                var (title, body) = await WordManager.GetWordAsync(_pathManager, site, request.IsFirstLineTitle, request.IsClearFormat, request.IsFirstLineIndent, request.IsClearFontSize, request.IsClearFontFamily, request.IsClearImages, filePath);
 
                 if (string.IsNullOrEmpty(title)) continue;
 
-                var dict = await ColumnsManager.SaveAttributesAsync(_pathManager, site, styleList, new NameValueCollection(), ContentAttribute.AllAttributes.Value);
+                var dict = await ColumnsManager.SaveAttributesAsync(_pathManager, site, styleList, new NameValueCollection(), ColumnsManager.MetadataAttributes.Value);
 
-                var contentInfo = new Content(dict)
+                var contentInfo = new Content
                 {
                     ChannelId = channel.Id,
                     SiteId = request.SiteId,
-                    AdminId = auth.AdminId,
-                    LastEditAdminId = auth.AdminId,
+                    AdminId = adminId,
+                    LastEditAdminId = adminId,
                     AddDate = DateTime.Now,
                     Checked = isChecked,
                     CheckedLevel = request.CheckedLevel,
                     Title = title,
-                    LastEditDate = DateTime.Now
+                    Body = body
                 };
+                contentInfo.LoadDict(dict);
 
-                contentInfo.Set(ContentAttribute.Content, content);
+                
                 await _contentRepository.InsertAsync(site, channel, contentInfo);
                 contentIdList.Add(contentInfo.Id);
             }

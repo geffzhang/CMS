@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
 using SS.CMS.Abstractions.Dto;
 using SS.CMS.Core;
-using SS.CMS.Web.Extensions;
+using SS.CMS.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin.Cms.Channels
 {
@@ -15,9 +15,9 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Channels
         [HttpGet, Route(RouteGet)]
         public async Task<ActionResult<ChannelResult>> Get(int siteId, int channelId)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(siteId,
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(siteId,
                     Constants.SitePermissions.Channels))
             {
                 return Unauthorized();
@@ -54,7 +54,8 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Channels
                     style.InputType == InputType.Video ||
                     style.InputType == InputType.File)
                 {
-                    site.Set(EditorManager.GetCountName(style), site.Get(EditorManager.GetCountName(style), 0));
+                    site.Set(ColumnsManager.GetCountName(style.AttributeName),
+                        site.Get(ColumnsManager.GetCountName(style.AttributeName), 0));
                 }
                 else if (style.InputType == InputType.CheckBox ||
                          style.InputType == InputType.SelectMultiple)
@@ -77,9 +78,9 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Channels
         [HttpPut, Route(Route)]
         public async Task<ActionResult<List<int>>> Edit([FromBody] PutRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasChannelPermissionsAsync(request.SiteId, request.Id, Constants.ChannelPermissions.ChannelEdit))
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.Id, Constants.ChannelPermissions.ChannelEdit))
             {
                 return Unauthorized();
             }
@@ -148,40 +149,36 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Channels
             var styles = await _tableStyleRepository.GetChannelStyleListAsync(channel);
             foreach (var style in styles)
             {
-                var value = request.Get(style.AttributeName, string.Empty);
                 var inputType = style.InputType;
                 if (inputType == InputType.TextEditor)
                 {
-                    value = await ContentUtility.TextEditorContentEncodeAsync(_pathManager, site, value);
+                    var value = request.Get(style.AttributeName, string.Empty);
+                    value = await _pathManager.EncodeTextEditorAsync(site, value);
                     value = UEditorUtils.TranslateToStlElement(value);
+                    channel.Set(style.AttributeName, value);
                 }
                 else if (inputType == InputType.Image ||
                          inputType == InputType.Video ||
                          inputType == InputType.File)
                 {
-                    var count = request.Get(EditorManager.GetCountName(style), 0);
-                    channel.Set(EditorManager.GetCountName(style), count);
+                    var count = request.Get(ColumnsManager.GetCountName(style.AttributeName), 0);
+                    channel.Set(ColumnsManager.GetCountName(style.AttributeName), count);
                     for (var n = 1; n <= count; n++)
                     {
-                        channel.Set(EditorManager.GetExtendName(style, n), request.Get(EditorManager.GetExtendName(style, n), string.Empty));
+                        channel.Set(ColumnsManager.GetExtendName(style.AttributeName, n),
+                            request.Get(ColumnsManager.GetExtendName(style.AttributeName, n), string.Empty));
                     }
                 }
-
-                if (inputType == InputType.CheckBox ||
-                    style.InputType == InputType.SelectMultiple)
+                else if (inputType == InputType.CheckBox ||
+                         style.InputType == InputType.SelectMultiple)
                 {
                     var list = request.Get<IEnumerable<object>>(style.AttributeName);
                     channel.Set(style.AttributeName, Utilities.ToString(list));
                 }
                 else
                 {
+                    var value = request.Get(style.AttributeName, string.Empty);
                     channel.Set(style.AttributeName, value);
-                }
-
-                if (inputType == InputType.Image || inputType == InputType.File || inputType == InputType.Video)
-                {
-                    var attributeName = ContentAttribute.GetExtendAttributeName(style.AttributeName);
-                    channel.Set(attributeName, request.Get(attributeName, string.Empty));
                 }
             }
 

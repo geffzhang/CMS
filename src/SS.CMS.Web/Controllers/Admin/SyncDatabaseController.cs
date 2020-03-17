@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
-using SS.CMS.Web.Extensions;
+using SS.CMS.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin
 {
@@ -44,7 +44,7 @@ namespace SS.CMS.Web.Controllers.Admin
         [HttpPost, Route(Route)]
         public async Task<ActionResult<SubmitResult>> Submit()
         {
-            //var auth = await _authManager.GetAdminAsync();
+            //
             //if (!request.IsAdminLoggin || !request.AdminPermissions.IsSuperAdmin())
             //{
             //    return Unauthorized();

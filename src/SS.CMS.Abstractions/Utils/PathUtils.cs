@@ -3,12 +3,11 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-
 namespace SS.CMS.Abstractions
 {
     public static class PathUtils
     {
-        public const char SeparatorChar = '\\';
+        public static char SeparatorChar = Path.DirectorySeparatorChar;
         public static readonly char[] InvalidPathChars = Path.GetInvalidPathChars();
 
         public static string Combine(params string[] paths)
@@ -16,10 +15,10 @@ namespace SS.CMS.Abstractions
             var retVal = string.Empty;
             if (paths != null && paths.Length > 0)
             {
-                retVal = paths[0]?.Replace(Constants.PageSeparatorChar, SeparatorChar).TrimEnd(SeparatorChar) ?? string.Empty;
+                retVal = paths[0]?.Replace(PageUtils.SeparatorChar, SeparatorChar).TrimEnd(SeparatorChar) ?? string.Empty;
                 for (var i = 1; i < paths.Length; i++)
                 {
-                    var path = paths[i] != null ? paths[i].Replace(Constants.PageSeparatorChar, SeparatorChar).Trim(SeparatorChar) : string.Empty;
+                    var path = paths[i] != null ? paths[i].Replace(PageUtils.SeparatorChar, SeparatorChar).Trim(SeparatorChar) : string.Empty;
                     retVal = Path.Combine(retVal, path);
                 }
             }
@@ -80,7 +79,7 @@ namespace SS.CMS.Abstractions
             if (!string.IsNullOrEmpty(path))
             {
                 path = RemoveQueryString(path);
-                path = path.Trim('/', '\\').Trim();
+                path = path.Trim('/', SeparatorChar).Trim();
                 try
                 {
                     retVal = Path.GetExtension(path);
@@ -165,10 +164,10 @@ namespace SS.CMS.Abstractions
 
         public static string GetLangPath(string contentRootPath, string language, string fileName)
         {
-            var langPath = PathUtils.Combine(contentRootPath, $"lang/{language}/{fileName}");
+            var langPath = Combine(contentRootPath, $"lang/{language}/{fileName}");
             if (!FileUtils.IsFileExists(langPath))
             {
-                langPath = PathUtils.Combine(contentRootPath, $"lang/{Constants.DefaultLanguage}/{fileName}");
+                langPath = Combine(contentRootPath, $"lang/{Constants.DefaultLanguage}/{fileName}");
             }
             return langPath;
         }

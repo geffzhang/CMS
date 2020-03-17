@@ -12,12 +12,11 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Editor
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery]GetRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId,
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId,
                     Constants.SitePermissions.Contents) ||
-                !await auth.AdminPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentAdd) ||
-                !await auth.AdminPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentEdit))
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentAdd) ||
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentEdit))
             {
                 return Unauthorized();
             }
@@ -34,7 +33,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Editor
             var tableName = _channelRepository.GetTableName(site, channel);
             var allStyles = await _tableStyleRepository.GetContentStyleListAsync(channel, tableName);
             var styles = allStyles.Where(style =>
-                    !string.IsNullOrEmpty(style.DisplayName) && !StringUtils.ContainsIgnoreCase(ContentAttribute.MetadataAttributes.Value, style.AttributeName)).Select(
+                    !string.IsNullOrEmpty(style.DisplayName) && !StringUtils.ContainsIgnoreCase(ColumnsManager.MetadataAttributes.Value, style.AttributeName)).Select(
                 x =>
                 {
                     var style = x.Clone<TableStyle>();
@@ -42,21 +41,27 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Editor
                     return style;
                 });
 
-            var (userIsChecked, userCheckedLevel) = await CheckManager.GetUserCheckLevelAsync(auth.AdminPermissions, site, site.Id);
+            var (userIsChecked, userCheckedLevel) = await CheckManager.GetUserCheckLevelAsync(_authManager, site, site.Id);
             var checkedLevels = CheckManager.GetCheckedLevelOptions(site, userIsChecked, userCheckedLevel, true);
 
-            var content = new Content
+            Content content;
+            if (request.ContentId > 0)
             {
-                Id = 0,
-                SiteId = site.Id,
-                ChannelId = channel.Id,
-                AddDate = DateTime.Now,
-                CheckedLevel = site.CheckContentDefaultLevel
-            };
-            if (request.ContentId != 0)
-            {
-                content = await _contentRepository.GetAsync(site, channel, request.ContentId);
+                content = await _pathManager.DecodeContentAsync(site, channel, request.ContentId);
             }
+            else
+            {
+                content = new Content
+                {
+                    Id = 0,
+                    SiteId = site.Id,
+                    ChannelId = channel.Id,
+                    AddDate = DateTime.Now,
+                    CheckedLevel = site.CheckContentDefaultLevel
+                };
+            }
+
+            //await ContentUtility.TextEditorContentDecodeAsync(parseManager.PathManager, pageInfo.Site, content.Get<string>(ContentAttribute.Content), pageInfo.IsLocal);
 
             return new GetResult
             {

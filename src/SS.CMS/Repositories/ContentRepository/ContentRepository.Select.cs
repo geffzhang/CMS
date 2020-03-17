@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Datory;
 using SS.CMS.Abstractions;
-using SS.CMS;
 using SS.CMS.Core;
 
 namespace SS.CMS.Repositories
@@ -134,31 +133,31 @@ namespace SS.CMS.Repositories
         {
             var repository = GetRepository(site, channel);
             var query = Q
-                .Select(ContentAttribute.Id)
-                .Where(ContentAttribute.ChannelId, channel.Id)
-                .OrderByDesc(ContentAttribute.Taxis, ContentAttribute.Id);
+                .Select(nameof(Content.Id))
+                .Where(nameof(Content.ChannelId), channel.Id)
+                .OrderByDesc(nameof(Content.Taxis), nameof(Content.Id));
 
             if (isPeriods)
             {
                 if (!string.IsNullOrEmpty(dateFrom))
                 {
-                    query.WhereDate(ContentAttribute.AddDate, ">=", TranslateUtils.ToDateTime(dateFrom));
+                    query.WhereDate(nameof(Content.AddDate), ">=", TranslateUtils.ToDateTime(dateFrom));
                 }
                 if (!string.IsNullOrEmpty(dateTo))
                 {
-                    query.WhereDate(ContentAttribute.AddDate, "<=", TranslateUtils.ToDateTime(dateTo).AddDays(1));
+                    query.WhereDate(nameof(Content.AddDate), "<=", TranslateUtils.ToDateTime(dateTo).AddDays(1));
                 }
             }
 
             if (checkedState.HasValue)
             {
-                query.Where(ContentAttribute.Checked, checkedState.Value);
+                query.Where(nameof(Content.Checked), checkedState.Value);
             }
 
             return await repository.GetAllAsync<int>(query);
         }
 
-        public async Task<List<int>> GetChannelIdsCheckedByLastEditDateHourAsync(Site site, int hour)
+        public async Task<List<int>> GetChannelIdsCheckedByLastModifiedDateHourAsync(Site site, int hour)
         {
             var repository = GetRepository(site.TableName);
 
@@ -166,7 +165,7 @@ namespace SS.CMS.Repositories
                 .Select(nameof(Content.ChannelId))
                 .Where(nameof(Content.SiteId), site.Id)
                 .WhereTrue(nameof(Content.Checked))
-                .WhereDate(nameof(Content.LastEditDate), ">", DateTime.Now.AddHours(-hour))
+                .WhereDate(nameof(Content.LastModifiedDate), ">", DateTime.Now.AddHours(-hour))
             );
         }
 

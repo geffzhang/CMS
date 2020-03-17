@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
 using SS.CMS.Abstractions.Dto.Result;
 using SS.CMS.Core;
+using SS.CMS.Extensions;
 using SS.CMS.Packaging;
-using SS.CMS.Web.Extensions;
 
 namespace SS.CMS.Web.Controllers.Admin
 {
@@ -29,8 +29,8 @@ namespace SS.CMS.Web.Controllers.Admin
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get()
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin || !await auth.AdminPermissions.IsSuperAdminAsync())
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() || !await _authManager.IsSuperAdminAsync())
             {
                 return Unauthorized();
             }

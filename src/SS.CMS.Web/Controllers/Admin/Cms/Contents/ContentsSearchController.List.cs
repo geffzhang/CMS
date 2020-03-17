@@ -14,9 +14,9 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
         [HttpPost, Route(RouteList)]
         public async Task<ActionResult<ListResult>> List([FromBody] ListRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin ||
-                !await auth.AdminPermissions.HasSitePermissionsAsync(request.SiteId,
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync() ||
+                !await _authManager.HasSitePermissionsAsync(request.SiteId,
                     Constants.SitePermissions.ContentsSearch))
             {
                 return Unauthorized();
@@ -28,9 +28,9 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
             var channel = await _channelRepository.GetAsync(request.SiteId);
 
             var pluginIds = _pluginManager.GetContentPluginIds(channel);
-            var pluginColumns = await _pluginManager.GetContentColumnsAsync(pluginIds);
+            var pluginColumns = _pluginManager.GetContentColumns(pluginIds);
 
-            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager);
+            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager, _pathManager);
             var columns = await columnsManager.GetContentListColumnsAsync(site, channel, ColumnsManager.PageType.SearchContents);
 
             var offset = site.PageSize * (request.Page - 1);
@@ -39,7 +39,7 @@ namespace SS.CMS.Web.Controllers.Admin.Cms.Contents
             if (request.IsAdvanced)
             {
                 var isAdmin = false;
-                var adminId = auth.AdminId;
+                var adminId = await _authManager.GetAdminIdAsync();
                 var isUser = false;
                 if (request.SearchType == SearchType.Admin)
                 {

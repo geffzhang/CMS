@@ -15,14 +15,16 @@ namespace SS.CMS.Web.Controllers.Home
         private readonly IAuthManager _authManager;
         private readonly IDatabaseManager _databaseManager;
         private readonly IPluginManager _pluginManager;
+        private readonly IPathManager _pathManager;
         private readonly ISiteRepository _siteRepository;
         private readonly IChannelRepository _channelRepository;
 
-        public ContentsLayerColumnsController(IAuthManager authManager, IDatabaseManager databaseManager, IPluginManager pluginManager, ISiteRepository siteRepository, IChannelRepository channelRepository)
+        public ContentsLayerColumnsController(IAuthManager authManager, IDatabaseManager databaseManager, IPluginManager pluginManager, IPathManager pathManager, ISiteRepository siteRepository, IChannelRepository channelRepository)
         {
             _authManager = authManager;
             _databaseManager = databaseManager;
             _pluginManager = pluginManager;
+            _pathManager = pathManager;
             _siteRepository = siteRepository;
             _channelRepository = channelRepository;
         }
@@ -30,9 +32,8 @@ namespace SS.CMS.Web.Controllers.Home
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery]ChannelRequest request)
         {
-            var auth = await _authManager.GetUserAsync();
-            if (!auth.IsUserLoggin ||
-                !await auth.UserPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ChannelEdit))
+            if (!await _authManager.IsUserAuthenticatedAsync() ||
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ChannelEdit))
             {
                 return Unauthorized();
             }
@@ -43,7 +44,7 @@ namespace SS.CMS.Web.Controllers.Home
             var channel = await _channelRepository.GetAsync(request.ChannelId);
             if (channel == null) return NotFound();
 
-            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager);
+            var columnsManager = new ColumnsManager(_databaseManager, _pluginManager, _pathManager);
             var attributes = await columnsManager.GetContentListColumnsAsync(site, channel, ColumnsManager.PageType.Contents);
 
             return new GetResult
@@ -55,9 +56,8 @@ namespace SS.CMS.Web.Controllers.Home
         [HttpPost, Route(Route)]
         public async Task<ActionResult<BoolResult>> Submit([FromBody]SubmitRequest request)
         {
-            var auth = await _authManager.GetUserAsync();
-            if (!auth.IsUserLoggin ||
-                !await auth.UserPermissions.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,  Constants.ChannelPermissions.ChannelEdit))
+            if (!await _authManager.IsUserAuthenticatedAsync() ||
+                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,  Constants.ChannelPermissions.ChannelEdit))
             {
                 return Unauthorized();
             }
@@ -72,7 +72,7 @@ namespace SS.CMS.Web.Controllers.Home
 
             await _channelRepository.UpdateAsync(channelInfo);
 
-            await auth.AddSiteLogAsync(request.SiteId, "设置内容显示项", $"显示项:{request.AttributeNames}");
+            await _authManager.AddSiteLogAsync(request.SiteId, "设置内容显示项", $"显示项:{request.AttributeNames}");
 
             return new BoolResult
             {

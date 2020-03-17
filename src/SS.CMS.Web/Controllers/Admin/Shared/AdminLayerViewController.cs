@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Datory.Utils;
 using Microsoft.AspNetCore.Mvc;
 using SS.CMS.Abstractions;
-using SS.CMS.Core.Plugins;
+using SS.CMS.Core.PluginImpls;
 
 namespace SS.CMS.Web.Controllers.Admin.Shared
 {
@@ -32,8 +32,8 @@ namespace SS.CMS.Web.Controllers.Admin.Shared
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery] GetRequest request)
         {
-            var auth = await _authManager.GetAdminAsync();
-            if (!auth.IsAdminLoggin) return Unauthorized();
+            
+            if (!await _authManager.IsAdminAuthenticatedAsync()) return Unauthorized();
 
             Administrator admin = null;
             if (request.AdminId > 0)
