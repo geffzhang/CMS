@@ -1,28 +1,27 @@
 .vs/
 .vscode/
 dist/
+build/
 packages/
 .config/
-src/SS.CMS.Web/plugins/
-src/SS.CMS.Web/wwwroot/
-src/SS.CMS.Web/.vs/
-src/SS.CMS.Web/.vscode/
-src/SS.CMS.Web/.config/
+src/SSCMS.Web/plugins/
+src/SSCMS.Web/wwwroot/
+src/SSCMS.Web/.vs/
+src/SSCMS.Web/.vscode/
+src/SSCMS.Web/.config/
+src/SSCMS.Web/version.txt
 
 *.zip
 *.sql
 *.exe
 *.exe.config
-ss.json
-ss.Development.json
+sscms.json
 appsettings.Development.json
-ss.sqlite
+database.sqlite
 package-lock.json
 Web.Backup.config
 Web.Restore.config
 Web.RestoreUpdate.config
-src/SS.CMS.Web/wwwroot/*
-!src/SS.CMS.Web/wwwroot/index.html
 .DS_Store
 
 ## Ignore Visual Studio temporary files, build results, and
