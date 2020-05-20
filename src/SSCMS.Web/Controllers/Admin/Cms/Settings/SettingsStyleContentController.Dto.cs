@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using SSCMS;
+using SSCMS.Configuration;
 using SSCMS.Dto;
-using SSCMS.Dto.Request;
+using SSCMS.Models;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Settings
 {
@@ -21,7 +21,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
             public string AttributeName { get; set; }
             public string DisplayName { get; set; }
             public string InputType { get; set; }
-            public IEnumerable<TableStyleRule> Rules { get; set; }
+            public IEnumerable<InputStyleRule> Rules { get; set; }
             public int Taxis { get; set; }
             public bool IsSystem { get; set; }
         }

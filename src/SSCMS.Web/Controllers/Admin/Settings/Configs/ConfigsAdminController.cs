@@ -1,18 +1,23 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
+using SSCMS.Dto;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Configs
 {
-    [Route("admin/settings/configsAdmin")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class ConfigsAdminController : ControllerBase
     {
-        private const string Route = "";
-        private const string RouteUpload = "actions/upload";
+        private const string Route = "settings/configsAdmin";
+        private const string RouteUpload = "settings/configsAdmin/actions/upload";
 
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
@@ -28,9 +33,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Configs
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsConfigsAdmin))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsConfigsAdmin))
             {
                 return Unauthorized();
             }
@@ -48,9 +51,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Configs
         [HttpPost, Route(Route)]
         public async Task<ActionResult<BoolResult>> Submit([FromBody]SubmitRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsConfigsAdmin))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsConfigsAdmin))
             {
                 return Unauthorized();
             }
@@ -74,9 +75,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Configs
         [HttpPost, Route(RouteUpload)]
         public async Task<ActionResult<StringResult>> Upload([FromForm]IFormFile file)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsConfigsAdmin))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsConfigsAdmin))
             {
                 return Unauthorized();
             }

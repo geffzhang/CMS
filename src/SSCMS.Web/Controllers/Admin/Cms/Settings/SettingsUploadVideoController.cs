@@ -1,16 +1,21 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Request;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
+using SSCMS.Dto;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Settings
 {
-    [Route("admin/cms/settings/settingsUploadVideo")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class SettingsUploadVideoController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "cms/settings/settingsUploadVideo";
 
         private readonly IAuthManager _authManager;
         private readonly ISiteRepository _siteRepository;
@@ -24,9 +29,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpGet, Route(Route)]
         public async Task<ActionResult<ObjectResult<Site>>> GetConfig([FromQuery] SiteRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId, Constants.SitePermissions.ConfigUpload))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId, AuthTypes.SitePermissions.SettingsUploadVideo))
             {
                 return Unauthorized();
             }
@@ -42,9 +45,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpPost, Route(Route)]
         public async Task<ActionResult<BoolResult>> Submit([FromBody] SubmitRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId, Constants.SitePermissions.ConfigUpload))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId, AuthTypes.SitePermissions.SettingsUploadVideo))
             {
                 return Unauthorized();
             }
@@ -54,7 +55,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
             site.VideoUploadDirectoryName = request.VideoUploadDirectoryName;
             site.VideoUploadDateFormatString = request.VideoUploadDateFormatString;
             site.IsVideoUploadChangeFileName = request.IsVideoUploadChangeFileName;
-            site.VideoUploadTypeCollection = request.VideoUploadTypeCollection.Replace("|", ",");
+            site.VideoUploadExtensions = request.VideoUploadExtensions.Replace("|", ",");
             site.VideoUploadTypeMaxSize = request.VideoUploadTypeMaxSize;
 
             await _siteRepository.UpdateAsync(site);

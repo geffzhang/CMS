@@ -1,21 +1,27 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
 using SSCMS.Core.Utils;
+using SSCMS.Enums;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Contents
 {
-    [Route("admin/cms/contents/contentsLayerView")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class ContentsLayerViewController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "cms/contents/contentsLayerView";
 
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
         private readonly IDatabaseManager _databaseManager;
-        private readonly IPluginManager _pluginManager;
+        private readonly IOldPluginManager _pluginManager;
         private readonly ISiteRepository _siteRepository;
         private readonly IChannelRepository _channelRepository;
         private readonly IContentRepository _contentRepository;
@@ -23,7 +29,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Contents
         private readonly IContentTagRepository _contentTagRepository;
         private readonly ITableStyleRepository _tableStyleRepository;
 
-        public ContentsLayerViewController(IAuthManager authManager, IPathManager pathManager, IDatabaseManager databaseManager, IPluginManager pluginManager, ISiteRepository siteRepository, IChannelRepository channelRepository, IContentRepository contentRepository, IContentGroupRepository contentGroupRepository, IContentTagRepository contentTagRepository, ITableStyleRepository tableStyleRepository)
+        public ContentsLayerViewController(IAuthManager authManager, IPathManager pathManager, IDatabaseManager databaseManager, IOldPluginManager pluginManager, ISiteRepository siteRepository, IChannelRepository channelRepository, IContentRepository contentRepository, IContentGroupRepository contentGroupRepository, IContentTagRepository contentTagRepository, ITableStyleRepository tableStyleRepository)
         {
             _authManager = authManager;
             _pathManager = pathManager;
@@ -41,11 +47,9 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Contents
         public async Task<ActionResult<GetResult>> Get([FromQuery] GetRequest request)
         {
             
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Contents) ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,
-                    Constants.ChannelPermissions.ContentView))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Contents) ||
+                !await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.View))
             {
                 return Unauthorized();
             }

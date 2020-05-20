@@ -2,34 +2,42 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using CacheManager.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Request;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
 using SSCMS.Core.Utils;
 using SSCMS.Core.Utils.Serialization;
+using SSCMS.Dto;
+using SSCMS.Enums;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Contents
 {
-    [Route("admin/cms/contents/contentsLayerImport")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class ContentsLayerImportController : ControllerBase
     {
-        private const string Route = "";
-        private const string RouteUpload = "actions/upload";
+        private const string Route = "cms/contents/contentsLayerImport";
+        private const string RouteUpload = "cms/contents/contentsLayerImport/actions/upload";
 
+        private readonly ICacheManager<CacheUtils.Process> _cacheManager;
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
         private readonly ICreateManager _createManager;
         private readonly IDatabaseManager _databaseManager;
-        private readonly IPluginManager _pluginManager;
+        private readonly IOldPluginManager _pluginManager;
         private readonly ISiteRepository _siteRepository;
         private readonly IChannelRepository _channelRepository;
 
-        public ContentsLayerImportController(IAuthManager authManager, IPathManager pathManager, ICreateManager createManager, IDatabaseManager databaseManager, IPluginManager pluginManager, ISiteRepository siteRepository, IChannelRepository channelRepository)
+        public ContentsLayerImportController(ICacheManager<CacheUtils.Process> cacheManager, IAuthManager authManager, IPathManager pathManager, ICreateManager createManager, IDatabaseManager databaseManager, IOldPluginManager pluginManager, ISiteRepository siteRepository, IChannelRepository channelRepository)
         {
+            _cacheManager = cacheManager;
             _authManager = authManager;
             _pathManager = pathManager;
             _createManager = createManager;
@@ -42,11 +50,9 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Contents
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery] ChannelRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Contents) ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentAdd))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Contents) ||
+                !await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.Add))
             {
                 return Unauthorized();
             }
@@ -70,11 +76,9 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Contents
         [HttpPost, Route(RouteUpload)]
         public async Task<ActionResult<UploadResult>> Upload([FromQuery] ChannelRequest request, [FromForm] IFormFile file)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Contents) ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentAdd))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Contents) ||
+                !await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.Add))
             {
                 return Unauthorized();
             }
@@ -110,11 +114,9 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Contents
         [HttpPost, Route(Route)]
         public async Task<ActionResult<BoolResult>> Submit([FromBody] SubmitRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Contents) ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentAdd))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Contents) ||
+                !await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.Add))
             {
                 return Unauthorized();
             }
@@ -125,11 +127,12 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Contents
             var channelInfo = await _channelRepository.GetAsync(request.ChannelId);
             if (channelInfo == null) return this.Error("无法确定内容对应的栏目");
 
+            var caching = new CacheUtils(_cacheManager);
             var isChecked = request.CheckedLevel >= site.CheckContentLevel;
 
             var contentIdList = new List<int>();
 
-            var adminId = await _authManager.GetAdminIdAsync();
+            var adminId = _authManager.AdminId;
             if (request.ImportType == "zip")
             {
                 foreach (var fileName in request.FileNames)
@@ -139,7 +142,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Contents
                     if (!FileUtils.IsType(FileType.Zip, PathUtils.GetExtension(localFilePath)))
                         continue;
 
-                    var importObject = new ImportObject(_pathManager, _pluginManager, _databaseManager, site, adminId);
+                    var importObject = new ImportObject(_pathManager, _pluginManager, _databaseManager, caching, site, adminId);
                     contentIdList.AddRange(await importObject.ImportContentsByZipFileAsync(channelInfo, localFilePath, request.IsOverride, isChecked, request.CheckedLevel, adminId, 0, SourceManager.Default));
                 }
             }
@@ -152,7 +155,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Contents
                     if (!FileUtils.IsType(FileType.Csv, PathUtils.GetExtension(localFilePath)))
                         continue;
 
-                    var importObject = new ImportObject(_pathManager, _pluginManager, _databaseManager, site, adminId);
+                    var importObject = new ImportObject(_pathManager, _pluginManager, _databaseManager, caching, site, adminId);
                     contentIdList.AddRange(await importObject.ImportContentsByCsvFileAsync(channelInfo, localFilePath, request.IsOverride, isChecked, request.CheckedLevel, adminId, 0, SourceManager.Default));
                 }
             }
@@ -164,7 +167,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Contents
                     if (!FileUtils.IsType(FileType.Txt, PathUtils.GetExtension(localFilePath)))
                         continue;
 
-                    var importObject = new ImportObject(_pathManager, _pluginManager, _databaseManager, site, adminId);
+                    var importObject = new ImportObject(_pathManager, _pluginManager, _databaseManager, caching, site, adminId);
                     contentIdList.AddRange(await importObject.ImportContentsByTxtFileAsync(channelInfo, localFilePath, request.IsOverride, isChecked, request.CheckedLevel, adminId, 0, SourceManager.Default));
                 }
             }

@@ -1,15 +1,20 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
 using SSCMS.Core.Utils;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Contents
 {
-    [Route("admin/cms/contents/contentsLayerState")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class ContentsLayerStateController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "cms/contents/contentsLayerState";
 
         private readonly IAuthManager _authManager;
         private readonly ISiteRepository _siteRepository;
@@ -31,11 +36,9 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Contents
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery] GetRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Contents) ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentView))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Contents) ||
+                !await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.View))
             {
                 return Unauthorized();
             }

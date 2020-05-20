@@ -1,6 +1,5 @@
-﻿using System;
-using System.Threading.Tasks;
-using SSCMS;
+﻿using System.Threading.Tasks;
+using SSCMS.Models;
 
 namespace SSCMS.Web.Controllers.Admin
 {
@@ -8,14 +7,15 @@ namespace SSCMS.Web.Controllers.Admin
     {
         public class CheckRequest
         {
-            public string Captcha { get; set; }
+            public string Token { get; set; }
+            public string Value { get; set; }
         }
 
         public class GetResult
         {
             public bool Success { get; set; }
             public string RedirectUrl { get; set; }
-            public string ProductVersion { get; set; }
+            public string Version { get; set; }
             public string AdminTitle { get; set; }
         }
 
@@ -23,19 +23,18 @@ namespace SSCMS.Web.Controllers.Admin
         {
             public string Account { get; set; }
             public string Password { get; set; }
-            public bool IsAutoLogin { get; set; }
+            public bool IsPersistent { get; set; }
         }
 
         public class LoginResult
         {
             public Administrator Administrator { get; set; }
-            public string AccessToken { get; set; }
-            public DateTime ExpiresAt { get; set; }
             public string SessionId { get; set; }
             public bool IsEnforcePasswordChange { get; set; }
+            public string Token { get; set; }
         }
 
-        public async Task<string> AdminRedirectCheckAsync()
+        private async Task<string> AdminRedirectCheckAsync()
         {
             var redirect = false;
             var redirectUrl = string.Empty;
@@ -48,7 +47,7 @@ namespace SSCMS.Web.Controllers.Admin
                 redirectUrl = _pathManager.GetAdminUrl(InstallController.Route);
             }
             else if (config.Initialized &&
-                     config.DatabaseVersion != _settingsManager.ProductVersion)
+                     config.DatabaseVersion != _settingsManager.Version)
             {
                 redirect = true;
                 redirectUrl = _pathManager.GetAdminUrl(SyncDatabaseController.Route);

@@ -4,15 +4,21 @@ using System.Collections.Specialized;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
 using SSCMS.Core.StlParser.StlElement;
 using SSCMS.Core.StlParser.StlEntity;
 using SSCMS.Core.StlParser.Utility;
+using SSCMS.Enums;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Stl
 {
+    [OpenApiIgnore]
+    [Route(Constants.ApiStlPrefix)]
     public partial class ActionsSearchController : ControllerBase
     {
         private readonly ISettingsManager _settingsManager;
@@ -34,7 +40,7 @@ namespace SSCMS.Web.Controllers.Stl
             _contentRepository = contentRepository;
         }
 
-        [HttpPost, Route(Constants.RouteActionsSearch)]
+        [HttpPost, Route(Constants.RouteStlActionsSearch)]
         public async Task<ActionResult<string>> Submit([FromBody] SubmitRequest request)
         {
             var template = string.Empty;

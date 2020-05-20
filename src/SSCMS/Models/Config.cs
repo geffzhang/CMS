@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using Datory;
 using Datory.Annotations;
+using SSCMS.Enums;
 
-namespace SSCMS
+namespace SSCMS.Models
 {
     [DataTable("siteserver_Config")]
     public class Config : Entity
@@ -84,7 +85,7 @@ namespace SSCMS
 
         public string AdminLogoUrl { get; set; }
 
-        public string AdminWelcomeHtml { get; set; } = @"欢迎使用 SS CMS 管理后台";
+        public string AdminWelcomeHtml { get; set; } = @"欢迎使用 SSCMS 管理后台";
 
         public bool IsHomeClosed { get; set; }
 
@@ -99,5 +100,7 @@ namespace SSCMS
         public bool IsHomeAgreement { get; set; }
 
         public string HomeAgreementHtml { get; set; } = @"阅读并接受<a href=""/agreement.html"" target=""_blank"">《用户协议》</a>";
+
+        public string HomeWelcomeHtml { get; set; } = @"欢迎使用用户中心";
     }
 }

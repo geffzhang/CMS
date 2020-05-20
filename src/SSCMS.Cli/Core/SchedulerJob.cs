@@ -9,16 +9,16 @@ namespace SSCMS.Cli.Core
         public async Task Execute(IJobExecutionContext context)
         {
             var application = CliUtils.GetApplication();
-            await application.RunExecuteAsync(Application.CommandName, Application.CommandArgs, context);
+            await application.RunExecuteAsync(Application.CommandName, Application.CommandArgs, Application.CommandExtras, context);
 
             if (context.NextFireTimeUtc != null)
             {
                 await Console.Out.WriteLineAsync();
-                await CliUtils.PrintRowLineAsync();
-                await CliUtils.PrintRowAsync("Fire Time", "Next Fire Time");
-                await CliUtils.PrintRowLineAsync();
-                await CliUtils.PrintRowAsync($"{context.FireTimeUtc.ToLocalTime():yyyy-MM-dd HH:mm:ss}", $"{context.NextFireTimeUtc.Value.ToLocalTime():yyyy-MM-dd HH:mm:ss}");
-                await CliUtils.PrintRowLineAsync();
+                await WriteUtils.PrintRowLineAsync();
+                await WriteUtils.PrintRowAsync("Fire Time", "Next Fire Time");
+                await WriteUtils.PrintRowLineAsync();
+                await WriteUtils.PrintRowAsync($"{context.FireTimeUtc.ToLocalTime():yyyy-MM-dd HH:mm:ss}", $"{context.NextFireTimeUtc.Value.ToLocalTime():yyyy-MM-dd HH:mm:ss}");
+                await WriteUtils.PrintRowLineAsync();
                 await Console.Out.WriteLineAsync();
             }
         }

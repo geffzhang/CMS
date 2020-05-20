@@ -1,33 +1,40 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using CacheManager.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Request;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
 using SSCMS.Core.Utils;
 using SSCMS.Core.Utils.Serialization;
+using SSCMS.Dto;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Sites
 {
-    [Route("admin/settings/sitesSave")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class SitesSaveController : ControllerBase
     {
-        private const string Route = "";
-        private const string RouteSettings = "actions/settings";
-        private const string RouteFiles = "actions/files";
-        private const string RouteActionsData = "actions/data";
+        private const string Route = "settings/sitesSave";
+        private const string RouteSettings = "settings/sitesSave/actions/settings";
+        private const string RouteFiles = "settings/sitesSave/actions/files";
+        private const string RouteActionsData = "settings/sitesSave/actions/data";
 
+        private readonly ICacheManager<CacheUtils.Process> _cacheManager;
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
         private readonly IDatabaseManager _databaseManager;
-        private readonly IPluginManager _pluginManager;
+        private readonly IOldPluginManager _pluginManager;
         private readonly ISiteRepository _siteRepository;
         private readonly IChannelRepository _channelRepository;
 
-        public SitesSaveController(IAuthManager authManager, IPathManager pathManager, IDatabaseManager databaseManager, IPluginManager pluginManager, ISiteRepository siteRepository, IChannelRepository channelRepository)
+        public SitesSaveController(ICacheManager<CacheUtils.Process> cacheManager, IAuthManager authManager, IPathManager pathManager, IDatabaseManager databaseManager, IOldPluginManager pluginManager, ISiteRepository siteRepository, IChannelRepository channelRepository)
         {
+            _cacheManager = cacheManager;
             _authManager = authManager;
             _pathManager = pathManager;
             _databaseManager = databaseManager;
@@ -39,9 +46,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery] SiteRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSites))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsSites))
             {
                 return Unauthorized();
             }
@@ -59,14 +64,13 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
         [HttpPost, Route(RouteSettings)]
         public async Task<ActionResult<SaveSettingsResult>> SaveSettings([FromBody] SaveRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSites))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsSites))
             {
                 return Unauthorized();
             }
 
-            var manager = new SiteTemplateManager(_pathManager, _pluginManager, _databaseManager);
+            var caching = new CacheUtils(_cacheManager);
+            var manager = new SiteTemplateManager(_pathManager, _pluginManager, _databaseManager, caching);
 
             if (manager.IsSiteTemplateDirectoryExists(request.TemplateDir))
             {
@@ -137,15 +141,14 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
         [HttpPost, Route(RouteFiles)]
         public async Task<ActionResult<SaveFilesResult>> SaveFiles([FromBody]SaveRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSites))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsSites))
             {
                 return Unauthorized();
             }
 
             var site = await _siteRepository.GetAsync(request.SiteId);
-            var exportObject = new ExportObject(_pathManager, _databaseManager, _pluginManager, site);
+            var caching = new CacheUtils(_cacheManager);
+            var exportObject = new ExportObject(_pathManager, _databaseManager, caching, _pluginManager, site);
             var siteTemplatePath = _pathManager.GetSiteTemplatesPath(request.TemplateDir);
             await exportObject.ExportFilesToSiteAsync(siteTemplatePath, request.IsAllFiles, request.CheckedDirectories, request.CheckedFiles, true);
 
@@ -161,9 +164,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
         [HttpPost, Route(RouteActionsData)]
         public async Task<ActionResult<BoolResult>> SaveData([FromBody]SaveRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSites))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsSites))
             {
                 return Unauthorized();
             }
@@ -173,10 +174,11 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
             var siteTemplatePath = _pathManager.GetSiteTemplatesPath(request.TemplateDir);
             var siteContentDirectoryPath = _pathManager.GetSiteTemplateMetadataPath(siteTemplatePath, DirectoryUtils.SiteTemplates.SiteContent);
 
-            var exportObject = new ExportObject(_pathManager, _databaseManager, _pluginManager, site);
+            var caching = new CacheUtils(_cacheManager);
+            var exportObject = new ExportObject(_pathManager, _databaseManager, caching, _pluginManager, site);
             await exportObject.ExportSiteContentAsync(siteContentDirectoryPath, request.IsSaveContents, request.IsSaveAllChannels, request.CheckedChannelIds);
 
-            await SiteTemplateManager.ExportSiteToSiteTemplateAsync(_pathManager, _databaseManager, _pluginManager, site, request.TemplateDir);
+            await SiteTemplateManager.ExportSiteToSiteTemplateAsync(_pathManager, _databaseManager, caching, _pluginManager, site, request.TemplateDir);
 
             var siteTemplateInfo = new SiteTemplateInfo
             {

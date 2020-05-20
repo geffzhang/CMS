@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
 using SSCMS.Core.Extensions;
 using SSCMS.Utils;
 
@@ -11,12 +10,9 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Editor
         [HttpPost, Route(RoutePreview)]
         public async Task<ActionResult<PreviewResult>> Preview([FromBody] PreviewRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Contents) ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,
-                    Constants.ChannelPermissions.ContentAdd))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Contents) ||
+                !await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.Add))
             {
                 return Unauthorized();
             }
@@ -48,7 +44,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Editor
             var content = request.Content;
             content.SiteId = site.Id;
             content.ChannelId = channel.Id;
-            content.AdminId = await _authManager.GetAdminIdAsync();
+            content.AdminId = _authManager.AdminId;
             content.Checked = true;
 
             content.Id = await _contentRepository.InsertPreviewAsync(site, channel, content);

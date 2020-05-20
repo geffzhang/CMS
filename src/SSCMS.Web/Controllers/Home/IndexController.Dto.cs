@@ -1,13 +1,18 @@
-﻿using SSCMS.Dto.Request;
+﻿using System.Collections.Generic;
+using SSCMS.Configuration;
+using SSCMS.Models;
 
 namespace SSCMS.Web.Controllers.Home
 {
     public partial class IndexController
     {
-        public class GetRequest : ChannelRequest
+        public class GetResult
         {
-            public string PageName { get; set; }
-            public int ContentId { get; set; }
+            public User User { get; set; }
+            public string HomeTitle { get; set; }
+            public string HomeLogoUrl { get; set; }
+            public List<Menu> Menus { get; set; }
+            public string DefaultPageUrl { get; set; }
         }
     }
 }

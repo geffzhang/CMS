@@ -1,32 +1,40 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
 using SSCMS.Core.Utils;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Sites
 {
-    [Route("admin/settings/sites")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class SitesController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "settings/sites";
 
         private readonly ISettingsManager _settingsManager;
+        private readonly IPluginManager _pluginManager;
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
-        private readonly IPluginManager _pluginManager;
+        private readonly IOldPluginManager _oldPluginManager;
         private readonly ISiteRepository _siteRepository;
         private readonly IContentRepository _contentRepository;
 
-        public SitesController(ISettingsManager settingsManager, IAuthManager authManager, IPathManager pathManager, IPluginManager pluginManager, ISiteRepository siteRepository,
+        public SitesController(ISettingsManager settingsManager, IPluginManager pluginManager, IAuthManager authManager, IPathManager pathManager, IOldPluginManager oldPluginManager, ISiteRepository siteRepository,
             IContentRepository contentRepository)
         {
             _settingsManager = settingsManager;
+            _pluginManager = pluginManager;
             _authManager = authManager;
             _pathManager = pathManager;
-            _pluginManager = pluginManager;
+            _oldPluginManager = oldPluginManager;
             _siteRepository = siteRepository;
             _contentRepository = contentRepository;
         }
@@ -34,9 +42,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSites))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsSites))
             {
                 return Unauthorized();
             }
@@ -64,15 +70,18 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
             //    }
             //}
 
+            var siteTypes = _pluginManager.GetSiteTypes();
+
             var sites = await _siteRepository.GetSitesWithChildrenAsync(0, async x => new
             {
                 SiteUrl = await _pathManager.GetSiteUrlAsync(x, false)
             });
 
-            var tableNames = await _siteRepository.GetSiteTableNamesAsync(_pluginManager);
+            var tableNames = await _siteRepository.GetSiteTableNamesAsync(_oldPluginManager);
 
             return new GetResult
             {
+                SiteTypes = siteTypes,
                 Sites = sites,
                 RootSiteId = rootSiteId,
                 TableNames = tableNames
@@ -82,9 +91,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
         [HttpDelete, Route(Route)]
         public async Task<ActionResult<SitesResult>> Delete([FromBody]DeleteRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSites))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsSites))
             {
                 return Unauthorized();
             }
@@ -126,9 +133,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
         [HttpPut, Route(Route)]
         public async Task<ActionResult<SitesResult>> Edit([FromBody]EditRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSites))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsSites))
             {
                 return Unauthorized();
             }

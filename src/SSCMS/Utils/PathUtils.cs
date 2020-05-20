@@ -2,12 +2,13 @@
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using SSCMS.Enums;
 
 namespace SSCMS.Utils
 {
     public static class PathUtils
     {
-        public static char SeparatorChar = Path.DirectorySeparatorChar;
+        public static readonly char SeparatorChar = Path.DirectorySeparatorChar;
         public static readonly char[] InvalidPathChars = Path.GetInvalidPathChars();
 
         public static string Combine(params string[] paths)
@@ -183,9 +184,9 @@ namespace SSCMS.Utils
 
         public static bool IsFileExtensionAllowed(string sAllowedExt, string sExt)
         {
-            if (sExt != null && sExt.StartsWith("."))
+            if (sExt != null && !sExt.StartsWith("."))
             {
-                sExt = sExt.Substring(1, sExt.Length - 1);
+                sExt = $".{sExt}";
             }
             sAllowedExt = sAllowedExt.Replace("|", ",");
             var aExt = sAllowedExt.Split(',');
@@ -230,6 +231,10 @@ namespace SSCMS.Utils
             return $"{StringUtils.GetShortGuid(false)}{GetExtension(filePath)}";
         }
 
-        
+        public static string GetOsUserProfileDirectoryPath(params string[] paths)
+        {
+            return Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".sscms",
+                PageUtils.Combine(paths));
+        }
     }
 }

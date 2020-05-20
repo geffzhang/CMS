@@ -1,11 +1,15 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Stl
 {
+    [OpenApiIgnore]
+    [Route(Constants.ApiStlPrefix)]
     public partial class ActionsDownloadController : ControllerBase
     {
         private readonly ISettingsManager _settingsManager;
@@ -23,8 +27,7 @@ namespace SSCMS.Web.Controllers.Stl
             _contentRepository = contentRepository;
         }
 
-        [HttpGet]
-        [Route(Constants.RouteActionsDownload)]
+        [HttpGet, Route(Constants.RouteStlActionsDownload)]
         public async Task<ActionResult> Get([FromQuery]GetRequest request)
         {
             try

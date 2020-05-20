@@ -1,14 +1,19 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Logs
 {
-    [Route("admin/settings/logsConfig")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class LogsConfigController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "settings/logsConfig";
 
         private readonly IAuthManager _authManager;
         private readonly IConfigRepository _configRepository;
@@ -22,9 +27,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Logs
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsLogsConfig))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsLogsConfig))
             {
                 return Unauthorized();
             }
@@ -40,9 +43,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Logs
         [HttpPost, Route(Route)]
         public async Task<ActionResult<GetResult>> Submit([FromBody]SubmitRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsLogsConfig))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsLogsConfig))
             {
                 return Unauthorized();
             }

@@ -2,23 +2,28 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Request;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
+using SSCMS.Dto;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Templates
 {
-    [Route("admin/cms/templates/templatesSpecial")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class TemplatesSpecialController : ControllerBase
     {
-        private const string Route = "";
-        private const string RouteId = "{siteId:int}/{specialId:int}";
-        private const string RouteDownload = "actions/download";
-        private const string RouteUpload = "actions/upload";
+        private const string Route = "cms/templates/templatesSpecial";
+        private const string RouteId = "cms/templates/templatesSpecial/{siteId:int}/{specialId:int}";
+        private const string RouteDownload = "cms/templates/templatesSpecial/actions/download";
+        private const string RouteUpload = "cms/templates/templatesSpecial/actions/upload";
 
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
@@ -38,17 +43,14 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Templates
         [HttpGet, Route(Route)]
         public async Task<ActionResult<ListResult>> List([FromQuery]SiteRequest request)
         {
-            
-
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Specials))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Specials))
             {
                 return Unauthorized();
             }
 
             var site = await _siteRepository.GetAsync(request.SiteId);
-            var specialInfoList = await _specialRepository.GetSpecialListAsync(request.SiteId);
+            var specialInfoList = await _specialRepository.GetSpecialsAsync(request.SiteId);
 
             return new ListResult
             {
@@ -60,11 +62,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Templates
         [HttpDelete, Route(Route)]
         public async Task<ActionResult<DeleteResult>> Delete([FromBody]SpecialIdRequest request)
         {
-            
-
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Specials))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Specials))
             {
                 return Unauthorized();
             }
@@ -76,7 +75,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Templates
                 "删除专题",
                 $"专题名称:{specialInfo.Title}");
 
-            var specialInfoList = await _specialRepository.GetSpecialListAsync(request.SiteId);
+            var specialInfoList = await _specialRepository.GetSpecialsAsync(request.SiteId);
 
             return new DeleteResult
             {
@@ -87,10 +86,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Templates
         [HttpPost, Route(RouteDownload)]
         public async Task<ActionResult<StringResult>> Download([FromBody]SpecialIdRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Specials))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Specials))
             {
                 return Unauthorized();
             }
@@ -115,10 +112,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Templates
         [HttpGet, Route(RouteId)]
         public async Task<ActionResult<GetSpecialResult>> GetSpecial(int siteId, int specialId)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(siteId,
-                    Constants.SitePermissions.Specials))
+            if (!await _authManager.HasSitePermissionsAsync(siteId,
+                    AuthTypes.SitePermissions.Specials))
             {
                 return Unauthorized();
             }
@@ -139,10 +134,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Templates
         [HttpPost, Route(RouteUpload)]
         public async Task<ActionResult<StringResult>> SpecialUpload([FromQuery] UploadRequest request, [FromForm] IFormFile file)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Specials))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Specials))
             {
                 return Unauthorized();
             }
@@ -166,10 +159,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Templates
         [HttpPost, Route(Route)]
         public async Task<ActionResult<ObjectResult<IEnumerable<Special>>>> SpecialSubmit([FromBody]SubmitRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Specials))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Specials))
             {
                 return Unauthorized();
             }
@@ -280,7 +271,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Templates
 
             await _createManager.CreateSpecialAsync(request.SiteId, specialId);
 
-            var specialInfoList = await _specialRepository.GetSpecialListAsync(request.SiteId);
+            var specialInfoList = await _specialRepository.GetSpecialsAsync(request.SiteId);
 
             return new ObjectResult<IEnumerable<Special>>
             {

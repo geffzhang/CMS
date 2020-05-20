@@ -1,30 +1,38 @@
 ﻿using System.Threading.Tasks;
+using CacheManager.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
 using SSCMS.Core.Packaging;
-using SSCMS.Core.Utils;
+using SSCMS.Dto;
+using SSCMS.Enums;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Plugins
 {
-    [Route("admin/plugins/install")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class InstallController : ControllerBase
     {
-        private const string RouteConfig = "config";
-        private const string RouteDownload = "download";
-        private const string RouteUpdate = "update";
-        private const string RouteCache = "cache";
+        private const string RouteConfig = "plugins/install/config";
+        private const string RouteDownload = "plugins/install/download";
+        private const string RouteUpdate = "plugins/install/update";
+        private const string RouteCache = "plugins/install/cache";
 
+        private readonly ICacheManager<object> _cacheManager;
         private readonly ISettingsManager _settingsManager;
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
-        private readonly IPluginManager _pluginManager;
+        private readonly IOldPluginManager _pluginManager;
         private readonly IDbCacheRepository _dbCacheRepository;
 
-        public InstallController(ISettingsManager settingsManager, IAuthManager authManager, IPathManager pathManager, IPluginManager pluginManager, IDbCacheRepository dbCacheRepository)
+        public InstallController(ICacheManager<object> cacheManager, ISettingsManager settingsManager, IAuthManager authManager, IPathManager pathManager, IOldPluginManager pluginManager, IDbCacheRepository dbCacheRepository)
         {
+            _cacheManager = cacheManager;
             _settingsManager = settingsManager;
             _authManager = authManager;
             _pathManager = pathManager;
@@ -35,9 +43,7 @@ namespace SSCMS.Web.Controllers.Admin.Plugins
         [HttpGet, Route(RouteConfig)]
         public async Task<ActionResult<GetResult>> Get()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.PluginsAdd))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.PluginsAdd))
             {
                 return Unauthorized();
             }
@@ -45,7 +51,7 @@ namespace SSCMS.Web.Controllers.Admin.Plugins
             return new GetResult
             {
                 IsNightly = _settingsManager.IsNightlyUpdate,
-                PluginVersion = _settingsManager.PluginVersion,
+                Version = _settingsManager.Version,
                 DownloadPlugins = _pluginManager.PackagesIdAndVersionList
             };
         }
@@ -53,24 +59,12 @@ namespace SSCMS.Web.Controllers.Admin.Plugins
         [HttpPost, Route(RouteDownload)]
         public async Task<ActionResult<BoolResult>> Download([FromBody]DownloadRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.PluginsAdd))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.PluginsAdd))
             {
                 return Unauthorized();
             }
 
-            if (!StringUtils.EqualsIgnoreCase(request.PackageId, PackageUtils.PackageIdSiteServerPlugin))
-            {
-                try
-                {
-                    PackageUtils.DownloadPackage(_pathManager, request.PackageId, request.Version);
-                }
-                catch
-                {
-                    PackageUtils.DownloadPackage(_pathManager, request.PackageId, request.Version);
-                }
-            }
+            CloudUtils.Dl.DownloadPlugin(_pathManager, request.PackageId, request.Version);
 
             return new BoolResult
             {
@@ -81,20 +75,15 @@ namespace SSCMS.Web.Controllers.Admin.Plugins
         [HttpPost, Route(RouteUpdate)]
         public async Task<ActionResult<BoolResult>> Update([FromBody]UploadRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.PluginsAdd))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.PluginsAdd))
             {
                 return Unauthorized();
             }
 
-            if (!StringUtils.EqualsIgnoreCase(request.PackageId, PackageUtils.PackageIdSiteServerPlugin))
+            var idWithVersion = $"{request.PackageId}.{request.Version}";
+            if (!_pluginManager.UpdatePackage(idWithVersion, TranslateUtils.ToEnum(request.PackageType, PackageType.Library), out var errorMessage))
             {
-                var idWithVersion = $"{request.PackageId}.{request.Version}";
-                if (!_pluginManager.UpdatePackage(idWithVersion, TranslateUtils.ToEnum(request.PackageType, PackageType.Library), out var errorMessage))
-                {
-                    return this.Error(errorMessage);
-                }
+                return this.Error(errorMessage);
             }
 
             return new BoolResult
@@ -107,14 +96,12 @@ namespace SSCMS.Web.Controllers.Admin.Plugins
         [HttpPost, Route(RouteCache)]
         public async Task<ActionResult<BoolResult>> Cache()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.PluginsAdd))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.PluginsAdd))
             {
                 return Unauthorized();
             }
 
-            CacheUtils.ClearAll();
+            _cacheManager.Clear();
             await _dbCacheRepository.ClearAsync();
 
             return new BoolResult

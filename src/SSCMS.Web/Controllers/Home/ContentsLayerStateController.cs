@@ -1,15 +1,20 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
 using SSCMS.Core.Utils;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Home
 {
-    [Route("home/contentsLayerState")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.User)]
+    [Route(Constants.ApiHomePrefix)]
     public partial class ContentsLayerStateController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "contentsLayerState";
 
         private readonly IAuthManager _authManager;
         private readonly ISiteRepository _siteRepository;
@@ -29,8 +34,7 @@ namespace SSCMS.Web.Controllers.Home
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery]GetRequest request)
         {
-            if (!await _authManager.IsUserAuthenticatedAsync() ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentView))
+            if (!await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.View))
             {
                 return Unauthorized();
             }

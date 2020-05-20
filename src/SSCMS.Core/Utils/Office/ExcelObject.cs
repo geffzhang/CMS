@@ -2,7 +2,8 @@
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
-using SSCMS;
+using SSCMS.Models;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Core.Utils.Office
@@ -10,10 +11,10 @@ namespace SSCMS.Core.Utils.Office
     public class ExcelObject
     {
         private readonly IDatabaseManager _databaseManager;
-        private readonly IPluginManager _pluginManager;
+        private readonly IOldPluginManager _pluginManager;
         private readonly IPathManager _pathManager;
 
-        public ExcelObject(IDatabaseManager databaseManager, IPluginManager pluginManager, IPathManager pathManager)
+        public ExcelObject(IDatabaseManager databaseManager, IOldPluginManager pluginManager, IPathManager pathManager)
         {
             _databaseManager = databaseManager;
             _pluginManager = pluginManager;
@@ -148,7 +149,7 @@ namespace SSCMS.Core.Utils.Office
                     userInfo.DisplayName,
                     userInfo.Email,
                     userInfo.Mobile,
-                    DateUtils.GetDateAndTimeString(userInfo.CreateDate),
+                    DateUtils.GetDateAndTimeString(userInfo.CreatedDate),
                     DateUtils.GetDateAndTimeString(userInfo.LastActivityDate)
                 });
             }
@@ -167,7 +168,7 @@ namespace SSCMS.Core.Utils.Office
                 "姓名",
                 "邮箱",
                 "手机",
-                "注册时间",
+                "添加时间",
                 "最后一次活动时间"
             };
             var rows = new List<List<string>>();
@@ -184,7 +185,7 @@ namespace SSCMS.Core.Utils.Office
                     administrator.DisplayName,
                     administrator.Email,
                     administrator.Mobile,
-                    DateUtils.GetDateAndTimeString(administrator.CreationDate),
+                    DateUtils.GetDateAndTimeString(administrator.CreatedDate),
                     DateUtils.GetDateAndTimeString(administrator.LastActivityDate)
                 });
             }

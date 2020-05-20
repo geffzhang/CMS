@@ -1,17 +1,22 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
 using SSCMS.Core.Utils;
+using SSCMS.Dto;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Home
 {
-    [Route("home/contentsLayerDelete")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.User)]
+    [Route(Constants.ApiHomePrefix)]
     public partial class ContentsLayerDeleteController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "contentsLayerDelete";
 
         private readonly IAuthManager _authManager;
         private readonly ICreateManager _createManager;
@@ -31,8 +36,7 @@ namespace SSCMS.Web.Controllers.Home
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery]GetRequest request)
         {
-            if (!await _authManager.IsUserAuthenticatedAsync() ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentDelete))
+            if (!await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.Delete))
             {
                 return Unauthorized();
             }
@@ -64,8 +68,7 @@ namespace SSCMS.Web.Controllers.Home
         [HttpPost, Route(Route)]
         public async Task<ActionResult<BoolResult>> Submit([FromBody]SubmitRequest request)
         {
-            if (!await _authManager.IsUserAuthenticatedAsync() ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentDelete))
+            if (!await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.Delete))
             {
                 return Unauthorized();
             }
@@ -98,7 +101,7 @@ namespace SSCMS.Web.Controllers.Home
                     $"栏目:{await _channelRepository.GetChannelNameNavigationAsync(request.SiteId, request.ChannelId)},内容条数:{request.ContentIds.Count}");
             }
 
-            var adminId = await _authManager.GetAdminIdAsync();
+            var adminId = _authManager.AdminId;
             await _contentRepository.RecycleContentsAsync(site, channel, request.ContentIds, adminId);
 
             await _createManager.TriggerContentChangedEventAsync(request.SiteId, request.ChannelId);

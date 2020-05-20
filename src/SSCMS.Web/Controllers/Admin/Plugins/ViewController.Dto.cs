@@ -1,4 +1,5 @@
 ﻿using SSCMS.Core.Packaging;
+using SSCMS.Plugins;
 
 namespace SSCMS.Web.Controllers.Admin.Plugins
 {
@@ -7,10 +8,10 @@ namespace SSCMS.Web.Controllers.Admin.Plugins
         public class GetResult
         {
             public bool IsNightly { get; set; }
-            public string PluginVersion { get; set; }
+            public string Version { get; set; }
             public bool Installed { get; set; }
             public string InstalledVersion { get; set; }
-            public PackageMetadata Package { get; set; }
+            public IPlugin Plugin { get; set; }
         }
     }
 }

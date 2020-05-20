@@ -1,16 +1,21 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
+using SSCMS.Dto;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Logs
 {
-    [Route("admin/settings/logsSite")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class LogsSiteController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "settings/logsSite";
 
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
@@ -31,7 +36,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Logs
         //public async Task<SiteLogPageResult> List([FromBody] PageRequest request)
         //{
         //    
-        //    await _authManager.CheckPermissionAsync(Request, Constants.AppPermissions.SettingsLog);
+        //    await _authManager.CheckPermissionAsync(Request, AuthTypes.AppPermissions.SettingsLog);
 
         //    var count = await _siteLogRepository.GetCountAsync(null, null, null, null, null, null);
         //    var siteLogs = await _siteLogRepository.GetAllAsync(null, null, null, null, null, null, request.Offset, request.Limit);
@@ -70,9 +75,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Logs
         [HttpPost, Route(Route)]
         public async Task<ActionResult<SiteLogPageResult>> List([FromBody] SearchRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsLogsSite))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsLogsSite))
             {
                 return Unauthorized();
             }
@@ -117,9 +120,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Logs
         [HttpDelete, Route(Route)]
         public async Task<ActionResult<BoolResult>> Delete()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsLogsSite))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsLogsSite))
             {
                 return Unauthorized();
             }

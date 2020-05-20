@@ -2,7 +2,7 @@
 using Datory;
 using Datory.Annotations;
 
-namespace SSCMS
+namespace SSCMS.Models
 {
     [DataTable("siteserver_UserMenu")]
     public class UserMenu : Entity
@@ -32,7 +32,7 @@ namespace SSCMS
         public string IconClass { get; set; }
 
         [DataColumn]
-        public string Href { get; set; }
+        public string Link { get; set; }
 
         [DataColumn]
         public string Target { get; set; }

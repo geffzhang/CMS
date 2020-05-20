@@ -1,20 +1,25 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Datory;
 using Datory.Utils;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Request;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
+using SSCMS.Configuration;
 using SSCMS.Core.Utils;
+using SSCMS.Dto;
+using SSCMS.Enums;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Settings
 {
-    [Route("admin/cms/settings/settingsSite")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class SettingsSiteController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "cms/settings/settingsSite";
 
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
@@ -32,26 +37,16 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> GetConfig([FromQuery] SiteRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId, Constants.SitePermissions.ConfigSite))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId, AuthTypes.SitePermissions.SettingsSite))
             {
                 return Unauthorized();
             }
 
             var site = await _siteRepository.GetAsync(request.SiteId);
-            var styles = new List<Style>();
+            var styles = new List<InputStyle>();
             foreach (var style in await _tableStyleRepository.GetSiteStyleListAsync(request.SiteId))
             {
-                styles.Add(new Style
-                {
-                    Id = style.Id,
-                    AttributeName = style.AttributeName,
-                    DisplayName = style.DisplayName,
-                    InputType = style.InputType.GetValue(),
-                    Rules = TranslateUtils.JsonDeserialize<IEnumerable<TableStyleRule>>(style.RuleValues),
-                    Items = style.Items
-                });
+                styles.Add(new InputStyle(style));
 
                 if (style.InputType == InputType.Image || 
                     style.InputType == InputType.Video ||
@@ -78,9 +73,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpPost, Route(Route)]
         public async Task<ActionResult<BoolResult>> Submit([FromBody] SubmitRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId, Constants.SitePermissions.ConfigSite))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId, AuthTypes.SitePermissions.SettingsSite))
             {
                 return Unauthorized();
             }
@@ -135,8 +128,10 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
             }
 
             site.SiteName = request.SiteName;
-            site.PageSize = request.PageSize;
-            site.IsCreateDoubleClick = request.IsCreateDoubleClick;
+            site.ImageUrl = request.ImageUrl;
+            site.Keywords = request.Keywords;
+            site.Description = request.Description;
+            
             await _siteRepository.UpdateAsync(site);
 
             await _authManager.AddSiteLogAsync(request.SiteId, "修改站点设置");

@@ -1,0 +1,13 @@
+{
+  "Urls": "http://*:5000",
+  "IsNightlyUpdate": false,
+  "IsProtectData": false,
+  "SecurityKey": "",
+  "Database": {
+    "Type": "",
+    "ConnectionString": ""
+  },
+  "Redis": {
+    "ConnectionString": ""
+  }
+}

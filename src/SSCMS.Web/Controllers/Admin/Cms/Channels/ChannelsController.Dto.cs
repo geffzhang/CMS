@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using Datory;
-using SSCMS;
+using SSCMS.Configuration;
 using SSCMS.Dto;
-using SSCMS.Dto.Request;
+using SSCMS.Enums;
+using SSCMS.Models;
+using SSCMS.Plugins;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Channels
 {
@@ -19,22 +21,12 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Channels
             public IEnumerable<IPackageMetadata> RelatedPlugins { get; set; }
         }
 
-        public class Style
-        {
-            public int Id { get; set; }
-            public string AttributeName { get; set; }
-            public string DisplayName { get; set; }
-            public string InputType { get; set; }
-            public IEnumerable<TableStyleRule> Rules { get; set; }
-            public IEnumerable<TableStyleItem> Items { get; set; }
-        }
-
         public class ChannelResult
         {
             public Channel Channel { get; set; }
             public IEnumerable<Select<string>> LinkTypes { get; set; }
             public IEnumerable<Select<string>> TaxisTypes { get; set; }
-            public IEnumerable<Style> Styles { get; set; }
+            public IEnumerable<InputStyle> Styles { get; set; }
         }
 
         public class ImportRequest : ChannelRequest

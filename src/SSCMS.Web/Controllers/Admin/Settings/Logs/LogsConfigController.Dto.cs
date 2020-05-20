@@ -1,4 +1,4 @@
-﻿using SSCMS;
+﻿using SSCMS.Models;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Logs
 {

@@ -9,7 +9,9 @@ using System.Xml.Linq;
 using DocumentFormat.OpenXml.Packaging;
 using HtmlAgilityPack;
 using OpenXmlPowerTools;
-using SSCMS;
+using SSCMS.Enums;
+using SSCMS.Models;
+using SSCMS.Services;
 using SSCMS.Utils;
 using FileUtils = SSCMS.Utils.FileUtils;
 

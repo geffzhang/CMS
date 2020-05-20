@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
-using SSCMS;
+using SSCMS.Configuration;
 using SSCMS.Dto;
-using SSCMS.Dto.Request;
+using SSCMS.Enums;
+using SSCMS.Models;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Editor
 {
@@ -19,7 +20,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Editor
             public Channel Channel { get; set; }
             public IEnumerable<string> GroupNames { get; set; }
             public IEnumerable<string> TagNames { get; set; }
-            public IEnumerable<TableStyle> Styles { get; set; }
+            public IEnumerable<InputStyle> Styles { get; set; }
             public List<Select<int>> CheckedLevels { get; set; }
         }
 

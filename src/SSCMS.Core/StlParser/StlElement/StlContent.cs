@@ -2,10 +2,12 @@
 using System.Threading.Tasks;
 using Datory;
 using Datory.Utils;
-using SSCMS;
 using SSCMS.Core.StlParser.Model;
 using SSCMS.Core.StlParser.Utility;
 using SSCMS.Core.Utils;
+using SSCMS.Enums;
+using SSCMS.Models;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Core.StlParser.StlElement
@@ -164,14 +166,14 @@ namespace SSCMS.Core.StlParser.StlElement
             }
 
             var contentId = contextInfo.ContentId;
-            var contentInfo = await parseManager.GetContentAsync();
+            var content = await parseManager.GetContentAsync();
 
             if (contextInfo.IsStlEntity && string.IsNullOrEmpty(type))
             {
-                return contentInfo.ToDictionary();
+                return content.ToDictionary();
             }
 
-            var parsedContent = await ParseImplAsync(parseManager, leftText, rightText, formatString, no, separator, startIndex, length, wordNum, ellipsis, replace, to, isClearTags, isReturnToBrStr, isLower, isUpper, isOriginal, type, contentInfo, contentId);
+            var parsedContent = await ParseImplAsync(parseManager, leftText, rightText, formatString, no, separator, startIndex, length, wordNum, ellipsis, replace, to, isClearTags, isReturnToBrStr, isLower, isUpper, isOriginal, type, content, contentId);
 
             var innerBuilder = new StringBuilder(parsedContent);
             await parseManager.ParseInnerContentAsync(innerBuilder);

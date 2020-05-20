@@ -1,19 +1,23 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Datory.Utils;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Request;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
+using SSCMS.Dto;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Settings
 {
-    [Route("admin/cms/settings/settingsCreateTrigger")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class SettingsCreateTriggerController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "cms/settings/settingsCreateTrigger";
 
         private readonly IAuthManager _authManager;
         private readonly ISiteRepository _siteRepository;
@@ -31,10 +35,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> List([FromQuery] SiteRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.ConfigCreateRule))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.SettingsCreateTrigger))
             {
                 return Unauthorized();
             }
@@ -77,10 +79,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpPut, Route(Route)]
         public async Task<ActionResult<BoolResult>> Submit([FromBody] SubmitRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.ConfigCreateRule))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.SettingsCreateTrigger))
             {
                 return Unauthorized();
             }

@@ -1,17 +1,21 @@
 ﻿using System.Threading.Tasks;
 using CacheManager.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Result;
-using SSCMS.Core.Utils;
+using NSwag.Annotations;
+using SSCMS.Dto;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Utilities
 {
-    [Route("admin/settings/utilitiesCache")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class UtilitiesCacheController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "settings/utilitiesCache";
 
         private readonly ICacheManager<object> _cacheManager;
         private readonly IAuthManager _authManager;
@@ -27,9 +31,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Utilities
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUtilitiesCache))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUtilitiesCache))
             {
                 return Unauthorized();
             }
@@ -43,15 +45,12 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Utilities
         [HttpPost, Route(Route)]
         public async Task<ActionResult<BoolResult>> ClearCache()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUtilitiesCache))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUtilitiesCache))
             {
                 return Unauthorized();
             }
 
             _cacheManager.Clear();
-            CacheUtils.ClearAll();
             await _dbCacheRepository.ClearAsync();
             _cacheManager.Clear();
 

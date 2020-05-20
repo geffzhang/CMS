@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
-using SSCMS;
 using SSCMS.Dto;
+using SSCMS.Models;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Templates
 {

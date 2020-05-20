@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Datory.Utils;
-using SSCMS;
+using SSCMS.Configuration;
+using SSCMS.Enums;
+using SSCMS.Models;
 
 namespace SSCMS.Web.Controllers.Admin.Shared
 {
@@ -40,7 +42,7 @@ namespace SSCMS.Web.Controllers.Admin.Shared
 
             public bool Horizontal { get; set; }
 
-            public List<TableStyleItem> Items { get; set; }
+            public List<InputStyleItem> Items { get; set; }
 
             public int Height { get; set; }
 
@@ -74,7 +76,7 @@ namespace SSCMS.Web.Controllers.Admin.Shared
             style.InputType = request.InputType;
             style.DefaultValue = request.DefaultValue;
             style.Horizontal = request.Horizontal;
-            style.Items = new List<TableStyleItem>();
+            style.Items = new List<InputStyleItem>();
 
             if (request.InputType == InputType.CheckBox || request.InputType == InputType.Radio || request.InputType == InputType.SelectMultiple || request.InputType == InputType.SelectOne)
             {
@@ -82,7 +84,7 @@ namespace SSCMS.Web.Controllers.Admin.Shared
                 {
                     foreach (var rapidValue in Utilities.GetStringList(request.RapidValues))
                     {
-                        var itemInfo = new TableStyleItem
+                        var itemInfo = new InputStyleItem
                         {
                             Label = rapidValue,
                             Value = rapidValue,
@@ -102,7 +104,7 @@ namespace SSCMS.Web.Controllers.Admin.Shared
                         }
                         if (styleItem.Selected) isHasSelected = true;
 
-                        var itemInfo = new TableStyleItem
+                        var itemInfo = new InputStyleItem
                         {
                             Label = styleItem.Label,
                             Value = styleItem.Value,
@@ -136,7 +138,7 @@ namespace SSCMS.Web.Controllers.Admin.Shared
             style.InputType = request.InputType;
             style.DefaultValue = request.DefaultValue;
             style.Horizontal = request.Horizontal;
-            style.Items = new List<TableStyleItem>();
+            style.Items = new List<InputStyleItem>();
 
             if (request.InputType == InputType.CheckBox || request.InputType == InputType.Radio || request.InputType == InputType.SelectMultiple || request.InputType == InputType.SelectOne)
             {
@@ -144,7 +146,7 @@ namespace SSCMS.Web.Controllers.Admin.Shared
                 {
                     foreach (var rapidValue in Utilities.GetStringList(request.RapidValues))
                     {
-                        var itemInfo = new TableStyleItem
+                        var itemInfo = new InputStyleItem
                         {
                             Label = rapidValue,
                             Value = rapidValue,
@@ -164,7 +166,7 @@ namespace SSCMS.Web.Controllers.Admin.Shared
                         }
                         if (styleItem.Selected) isHasSelected = true;
 
-                        var itemInfo = new TableStyleItem
+                        var itemInfo = new InputStyleItem
                         {
                             Label = styleItem.Label,
                             Value = styleItem.Value,

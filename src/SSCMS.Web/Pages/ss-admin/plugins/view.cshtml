@@ -1,0 +1,140 @@
+﻿@page
+@{ Layout = "_Layout"; }
+
+<el-row style="background-color: #eff1f3">
+  <el-col :span="4" align="center">
+    <img :src="plugin.icon || utils.getAssetsUrl('images/favicon.png')" style="height: 100px; width: 100px;">
+  </el-col>
+  <el-col :span="20">
+    <h4>{{ plugin.displayName }}</h4>
+    <div>
+      {{ plugin.publisher }}
+    </div>
+    <div>
+      {{ plugin.description }}
+    </div>
+
+    <el-divider></el-divider>
+
+    <p>
+      <span v-if="plugin.latestNightlyVersion">
+        最新版本: <span class="text-primary"> {{ plugin.latestNightlyVersion }} </span>
+      </span>
+      <span>|</span>
+      <span>
+        更新时间： {{ plugin.latestNightlyPublished }}
+      </span>
+      <span v-if="plugin.tags">
+        <span>|</span>
+        <span>
+          标签： 
+          <a v-for="tagName in getTagNames(plugin)" class="mr-2 text-primary" :href="utils.getPluginsUrl('add', {q: tagName})">
+            {{ tagName }}
+          </a>
+        </span>
+      </span>
+    </p>
+    <p> {{ plugin.summary }} </p>
+    <span v-if="installed && isShouldUpdate" class="text-warning mt-2 mb-0">
+      系统检测到插件新版本，当前版本：{{ installedVersion }}，新版本：{{ release.version }}
+    </span>
+    <div>
+      <el-button size="small" v-if="installed && isShouldUpdate" v-on:click="location.href = utils.getPluginsUrl('install', {isUpdate: true, pluginIds: plugin.pluginId});return false;"
+        class="btn btn-warning">
+        升级插件
+      </el-button>
+      <el-button size="small" v-else-if="installed">
+        插件已安装
+      </el-button>
+      <template v-else>
+        <el-button size="small" v-if="plugin.price" v-on:click="location.href = utils.getPluginsUrl('install', {pluginIds: plugin.pluginId});return false;"
+          class="btn btn-primary">
+          购买并安装插件
+        </el-button>
+        <el-button size="small" v-else v-on:click="location.href = utils.getPluginsUrl('install', {pluginIds: plugin.pluginId});return false;"
+          class="btn btn-primary">
+          安装插件
+        </el-button>
+      </template>
+      <el-link size="small" class="btn btn-success ml-2" target="_blank" :href="$urlCloud + '/plugins/plugin.html?id=' + plugin.pluginId">插件主页</el-link>
+    </div>
+  </el-col>
+</el-row>
+
+<div class="page-title-box">
+  <h4 class="page-title">插件详情</h4>
+</div>
+<table class="table m-0 m-t-25">
+  <tbody>
+    <tr>
+      <th scope="row">版本发行说明</th>
+      <td>{{ release.releaseNotes }}</td>
+    </tr>
+    <tr>
+      <th scope="row">更新日期</th>
+      <td>{{ release.published }}</td>
+    </tr>
+    <tr>
+      <th scope="row">插件Id</th>
+      <td>{{ plugin.pluginId }}</td>
+    </tr>
+    <tr>
+      <th scope="row">版本号</th>
+      <td>{{ release.version }}</td>
+    </tr>
+    <tr v-if="user">
+      <th scope="row">作者</th>
+      <td>{{ user.displayName || user.userName }}</td>
+    </tr>
+    <tr v-if="plugin">
+      <th scope="row">标签</th>
+      <td>{{ plugin.tags }}</td>
+    </tr>
+    <tr v-if="plugin">
+      <th scope="row">插件项目链接</th>
+      <td>
+        <a :style="{ display: plugin.projectUrl ? '' : 'none' }" target="_blank" :href="plugin.projectUrl">
+          {{ plugin.projectUrl }} </a>
+      </td>
+    </tr>
+    <tr v-if="plugin">
+      <th scope="row">版权</th>
+      <td>{{ plugin.copyright }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div v-if="(release.pluginReferences && release.pluginReferences.length > 0) || (release.libraryReferences && release.libraryReferences.length > 0)">
+  <div class="page-title-box">
+      <h4 class="page-title"> 依赖项 </h4>
+  </div>
+  <p class="text-muted font-13 m-b-25"> 此插件依赖的类库以及其他插件 </p>
+  <table class="table m-0">
+      <thead>
+      <tr>
+          <th>依赖项</th>
+          <th>版本</th>
+          <th>类型</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr v-for="reference in release.pluginReferences">
+          <td>{{ reference.id }}</td>
+          <td>{{ reference.version }}</td>
+          <td>插件</td>
+      </tr>
+      <tr v-for="reference in release.libraryReferences">
+          <td>{{ reference.id }}</td>
+          <td>{{ reference.version }}</td>
+          <td>类库</td>
+      </tr>
+      </tbody>
+  </table>
+</div>
+
+<!-- <div class="card-box">
+  <div v-html="package.readme" class="readme m-b-10"></div>
+</div> -->
+
+@section Scripts{
+<script src="/sitefiles/assets/js/admin/plugins/view.js" type="text/javascript"></script> }

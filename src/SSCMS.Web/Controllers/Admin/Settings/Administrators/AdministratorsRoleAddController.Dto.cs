@@ -1,14 +1,15 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using SSCMS;
-using SSCMS.Core.Utils;
+using SSCMS.Configuration;
+using SSCMS.Models;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Administrators
 {
     public partial class AdministratorsRoleAddController
     {
-        public class Permission
+        public class Option
         {
             public string Name { get; set; }
 
@@ -25,18 +26,18 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Administrators
         public class GetResult
         {
             public Role Role { get; set; }
-            public List<Permission> Permissions { get; set; }
+            public List<Option> Permissions { get; set; }
             public List<Site> Sites { get; set; }
             public List<int> CheckedSiteIds { get; set; }
-            public List<object> SitePermissionsList { get; set; }
+            public List<SitePermissionsResult> SitePermissionsList { get; set; }
         }
 
         public class SitePermissionsResult
         {
             public int SiteId { get; set; }
-            public List<Permission> SitePermissions { get; set; }
-            public List<Permission> PluginPermissions { get; set; }
-            public List<Permission> ChannelPermissions { get; set; }
+            public List<Option> SitePermissions { get; set; }
+            public List<Option> ChannelPermissions { get; set; }
+            public List<Option> ContentPermissions { get; set; }
             public Channel Channel { get; set; }
             public List<int> CheckedChannelIds { get; set; }
         }
@@ -45,80 +46,92 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Administrators
         {
             public string RoleName { get; set; }
             public string Description { get; set; }
-            public List<string> GeneralPermissions { get; set; }
+            public List<string> AppPermissions { get; set; }
             public List<SitePermissions> SitePermissions { get; set; }
         }
 
-        private async Task<SitePermissionsResult> GetSitePermissionsObjectAsync(int roleId, int siteId)
+        private async Task<SitePermissionsResult> GetSitePermissionsObjectAsync(List<Permission> allPermissions, int roleId, int siteId)
         {
             SitePermissions sitePermissionsInfo = null;
             if (roleId > 0)
             {
                 var roleInfo = await _roleRepository.GetRoleAsync(roleId);
-                sitePermissionsInfo = await _sitePermissionsRepository.GetSystemPermissionsAsync(roleInfo.RoleName, siteId);
+                sitePermissionsInfo = await _sitePermissionsRepository.GetAsync(roleInfo.RoleName, siteId);
             }
             if (sitePermissionsInfo == null) sitePermissionsInfo = new SitePermissions();
 
             var site = await _siteRepository.GetAsync(siteId);
-            var sitePermissions = new List<Permission>();
-            var pluginPermissions = new List<Permission>();
-            var channelPermissions = new List<Permission>();
-            var instance = await PermissionConfigManager.GetInstanceAsync(_pathManager, _pluginManager);
+            if (site == null) return null;
+
+            var sitePermissions = new List<Option>();
+            var channelPermissions = new List<Option>();
+            var contentPermissions = new List<Option>();
 
             if (await _authManager.IsSuperAdminAsync())
             {
-                foreach (var permission in instance.WebsiteSysPermissions)
+                foreach (var permission in allPermissions.Where(x => StringUtils.EqualsIgnoreCase(x.Type, site.SiteType)))
                 {
-                    sitePermissions.Add(new Permission
+                    sitePermissions.Add(new Option
                     {
-                        Name = permission.Name,
+                        Name = permission.Id,
                         Text = permission.Text,
-                        Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.WebsitePermissions, permission.Name)
+                        Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.Permissions, permission.Id)
                     });
                 }
 
-                foreach (var permission in instance.WebsitePluginPermissions)
-                {
-                    pluginPermissions.Add(new Permission
-                    {
-                        Name = permission.Name,
-                        Text = permission.Text,
-                        Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.WebsitePermissions, permission.Name)
-                    });
-                }
+                //foreach (var permission in permissions.WebsitePluginPermissions)
+                //{
+                //    pluginPermissions.Add(new Permission
+                //    {
+                //        Name = permission.Name,
+                //        Text = permission.Text,
+                //        Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.WebsitePermissions, permission.Name)
+                //    });
+                //}
 
-                var channelPermissionList = instance.ChannelPermissions;
+                var channelPermissionList = allPermissions.Where(x => StringUtils.EqualsIgnoreCase(x.Type, AuthTypes.Resources.SiteChannel));
                 foreach (var permission in channelPermissionList)
                 {
-                    if (permission.Name == Constants.ChannelPermissions.ContentCheckLevel1)
+                    channelPermissions.Add(new Option
+                    {
+                        Name = permission.Id,
+                        Text = permission.Text,
+                        Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.ChannelPermissions, permission.Id)
+                    });
+                }
+
+                var contentPermissionList = allPermissions.Where(x => StringUtils.EqualsIgnoreCase(x.Type, AuthTypes.Resources.SiteContent));
+                foreach (var permission in contentPermissionList)
+                {
+                    if (permission.Id == AuthTypes.SiteContentPermissions.CheckLevel1)
                     {
                         if (site.CheckContentLevel < 1)
                         {
                             continue;
                         }
                     }
-                    else if (permission.Name == Constants.ChannelPermissions.ContentCheckLevel2)
+                    else if (permission.Id == AuthTypes.SiteContentPermissions.CheckLevel2)
                     {
                         if (site.CheckContentLevel < 2)
                         {
                             continue;
                         }
                     }
-                    else if (permission.Name == Constants.ChannelPermissions.ContentCheckLevel3)
+                    else if (permission.Id == AuthTypes.SiteContentPermissions.CheckLevel3)
                     {
                         if (site.CheckContentLevel < 3)
                         {
                             continue;
                         }
                     }
-                    else if (permission.Name == Constants.ChannelPermissions.ContentCheckLevel4)
+                    else if (permission.Id == AuthTypes.SiteContentPermissions.CheckLevel4)
                     {
                         if (site.CheckContentLevel < 4)
                         {
                             continue;
                         }
                     }
-                    else if (permission.Name == Constants.ChannelPermissions.ContentCheckLevel5)
+                    else if (permission.Id == AuthTypes.SiteContentPermissions.CheckLevel5)
                     {
                         if (site.CheckContentLevel < 5)
                         {
@@ -126,11 +139,11 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Administrators
                         }
                     }
 
-                    channelPermissions.Add(new Permission
+                    contentPermissions.Add(new Option
                     {
-                        Name = permission.Name,
+                        Name = permission.Id,
                         Text = permission.Text,
-                        Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.ChannelPermissions, permission.Name)
+                        Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.ContentPermissions, permission.Id)
                     });
                 }
             }
@@ -141,67 +154,84 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Administrators
                     var websitePermissionList = await _authManager.GetSitePermissionsAsync(siteId);
                     foreach (var websitePermission in websitePermissionList)
                     {
-                        foreach (var permission in instance.WebsiteSysPermissions)
+                        foreach (var permission in allPermissions.Where(x => StringUtils.EqualsIgnoreCase(x.Type, site.SiteType)))
                         {
-                            if (permission.Name == websitePermission)
+                            if (permission.Id == websitePermission)
                             {
-                                sitePermissions.Add(new Permission
+                                sitePermissions.Add(new Option
                                 {
-                                    Name = permission.Name,
+                                    Name = permission.Id,
                                     Text = permission.Text,
-                                    Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.WebsitePermissions, permission.Name)
+                                    Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.Permissions, permission.Id)
                                 });
                             }
                         }
 
-                        foreach (var permission in instance.WebsitePluginPermissions)
-                        {
-                            if (permission.Name == websitePermission)
-                            {
-                                pluginPermissions.Add(new Permission
-                                {
-                                    Name = permission.Name,
-                                    Text = permission.Text,
-                                    Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.WebsitePermissions, permission.Name)
-                                });
-                            }
-                        }
+                        //foreach (var permission in instance.WebsitePluginPermissions)
+                        //{
+                        //    if (permission.Name == websitePermission)
+                        //    {
+                        //        pluginPermissions.Add(new Permission
+                        //        {
+                        //            Name = permission.Name,
+                        //            Text = permission.Text,
+                        //            Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.WebsitePermissions, permission.Name)
+                        //        });
+                        //    }
+                        //}
                     }
                 }
 
                 var channelPermissionList = await _authManager.GetChannelPermissionsAsync(siteId);
                 foreach (var channelPermission in channelPermissionList)
                 {
-                    foreach (var permission in instance.ChannelPermissions)
+                    foreach (var permission in allPermissions.Where(x => StringUtils.EqualsIgnoreCase(x.Type, AuthTypes.Resources.SiteChannel)))
                     {
-                        if (permission.Name == channelPermission)
+                        if (permission.Id == channelPermission)
                         {
-                            if (channelPermission == Constants.ChannelPermissions.ContentCheckLevel1)
+                            channelPermissions.Add(new Option
+                            {
+                                Name = permission.Id,
+                                Text = permission.Text,
+                                Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.ChannelPermissions, permission.Id)
+                            });
+                        }
+                    }
+                }
+
+                var contentPermissionList = await _authManager.GetContentPermissionsAsync(siteId);
+                foreach (var contentPermission in contentPermissionList)
+                {
+                    foreach (var permission in allPermissions.Where(x => StringUtils.EqualsIgnoreCase(x.Type, AuthTypes.Resources.SiteContent)))
+                    {
+                        if (permission.Id == contentPermission)
+                        {
+                            if (contentPermission == AuthTypes.SiteContentPermissions.CheckLevel1)
                             {
                                 if (site.CheckContentLevel < 1) continue;
                             }
-                            else if (channelPermission == Constants.ChannelPermissions.ContentCheckLevel2)
+                            else if (contentPermission == AuthTypes.SiteContentPermissions.CheckLevel2)
                             {
                                 if (site.CheckContentLevel < 2) continue;
                             }
-                            else if (channelPermission == Constants.ChannelPermissions.ContentCheckLevel3)
+                            else if (contentPermission == AuthTypes.SiteContentPermissions.CheckLevel3)
                             {
                                 if (site.CheckContentLevel < 3) continue;
                             }
-                            else if (channelPermission == Constants.ChannelPermissions.ContentCheckLevel4)
+                            else if (contentPermission == AuthTypes.SiteContentPermissions.CheckLevel4)
                             {
                                 if (site.CheckContentLevel < 4) continue;
                             }
-                            else if (channelPermission == Constants.ChannelPermissions.ContentCheckLevel5)
+                            else if (contentPermission == AuthTypes.SiteContentPermissions.CheckLevel5)
                             {
                                 if (site.CheckContentLevel < 5) continue;
                             }
 
-                            channelPermissions.Add(new Permission
+                            contentPermissions.Add(new Option
                             {
-                                Name = permission.Name,
+                                Name = permission.Id,
                                 Text = permission.Text,
-                                Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.ChannelPermissions, permission.Name)
+                                Selected = StringUtils.ContainsIgnoreCase(sitePermissionsInfo.ContentPermissions, permission.Id)
                             });
                         }
                     }
@@ -226,8 +256,8 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Administrators
             {
                 SiteId = siteId,
                 SitePermissions = sitePermissions,
-                PluginPermissions = pluginPermissions,
                 ChannelPermissions = channelPermissions,
+                ContentPermissions = contentPermissions,
                 Channel = channelInfo,
                 CheckedChannelIds = checkedChannelIdList
             };

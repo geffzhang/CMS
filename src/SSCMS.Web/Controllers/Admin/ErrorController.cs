@@ -1,11 +1,13 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
+using SSCMS.Repositories;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin
 {
-    [Route(Constants.ApiRoute)]
+    [OpenApiIgnore]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class ErrorController : ControllerBase
     {
         public const string Route = "error";

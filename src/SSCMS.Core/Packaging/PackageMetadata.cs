@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using NuGet.Packaging;
 using NuGet.Versioning;
-using SSCMS;
+using SSCMS.Plugins;
+using SSCMS.Services;
+using SSCMS.Utils;
 
 namespace SSCMS.Core.Packaging
 {
-    public class PackageMetadata : SSCMS.IPackageMetadata
+    public class PackageMetadata : IPackageMetadata
     {
         private readonly Dictionary<string, string> _metadata;
         private readonly IReadOnlyCollection<PackageDependencyGroup> _dependencyGroups;
@@ -22,7 +25,7 @@ namespace SSCMS.Core.Packaging
             Version = "0.0.0";
         }
 
-        public PackageMetadata(IPlugin plugin)
+        public PackageMetadata(IOldPlugin plugin)
         {
             PluginId = plugin.PluginId;
             Version = plugin.Version;
@@ -70,11 +73,6 @@ namespace SSCMS.Core.Packaging
             Language = GetValue(PackageMetadataStrings.Language, string.Empty);
             Owners = GetValue(PackageMetadataStrings.Owners, string.Empty);
             Authors = GetValue(PackageMetadataStrings.Authors, string.Empty);
-
-            if (Version == "$version$")
-            {
-                Version = PackageUtils.VersionDev;
-            }
 
             if (Version.IndexOf('.') < 0)
             {
@@ -177,6 +175,95 @@ namespace SSCMS.Core.Packaging
                 nuspecReader.GetPackageTypes(),
                 nuspecReader.GetMinClientVersion()
            );
+        }
+
+        public static PackageMetadata GetPackageMetadataFromPackages(IPathManager pathManager, string directoryName, out string nuspecPath, out string dllDirectoryPath, out string errorMessage)
+        {
+            nuspecPath = string.Empty;
+            dllDirectoryPath = string.Empty;
+            errorMessage = string.Empty;
+
+            var directoryPath = pathManager.GetPackagesPath(directoryName);
+
+            foreach (var filePath in DirectoryUtils.GetFilePaths(directoryPath))
+            {
+                if (StringUtils.EqualsIgnoreCase(Path.GetExtension(filePath), ".zip"))
+                {
+                    nuspecPath = filePath;
+                    break;
+                }
+            }
+
+            if (string.IsNullOrEmpty(nuspecPath))
+            {
+                errorMessage = "配置文件不存在";
+                return null;
+            }
+
+            PackageMetadata metadata;
+            try
+            {
+                metadata = GetPackageMetadata(nuspecPath);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+                return null;
+            }
+
+            var packageId = metadata.PluginId;
+
+            if (string.IsNullOrEmpty(packageId))
+            {
+                errorMessage = $"配置文件 {nuspecPath} 不正确";
+                return null;
+            }
+
+            dllDirectoryPath = FindDllDirectoryPath(directoryPath);
+
+            //if (!FileUtils.IsFileExists(PathUtils.Combine(dllDirectoryPath, packageId + ".dll")))
+            //{
+            //    errorMessage = $"插件可执行文件 {packageId}.dll 不存在";
+            //    return null;
+            //}
+
+            return metadata;
+        }
+
+        //https://docs.microsoft.com/en-us/nuget/schema/target-frameworks#supported-frameworks
+        private static string FindDllDirectoryPath(string packageDirectoryPath)
+        {
+            var dllDirectoryPath = string.Empty;
+
+            foreach (var dirName in DirectoryUtils.GetDirectoryNames(PathUtils.Combine(packageDirectoryPath, "lib")))
+            {
+                if (StringUtils.StartsWithIgnoreCase(dirName, "net45") ||
+                    StringUtils.StartsWithIgnoreCase(dirName, "net451") ||
+                    StringUtils.StartsWithIgnoreCase(dirName, "net452") ||
+                    StringUtils.StartsWithIgnoreCase(dirName, "net46") ||
+                    StringUtils.StartsWithIgnoreCase(dirName, "net461") ||
+                    StringUtils.StartsWithIgnoreCase(dirName, "net462"))
+                {
+                    dllDirectoryPath = PathUtils.Combine(packageDirectoryPath, "lib", dirName);
+                    break;
+                }
+            }
+            if (string.IsNullOrEmpty(dllDirectoryPath))
+            {
+                dllDirectoryPath = PathUtils.Combine(packageDirectoryPath, "lib");
+            }
+
+            return dllDirectoryPath;
+        }
+
+        private static PackageMetadata GetPackageMetadata(string configPath)
+        {
+            var nuspecReader = new NuspecReader(configPath);
+
+            var rawMetadata = nuspecReader.GetMetadata();
+            if (rawMetadata == null || !rawMetadata.Any()) return null;
+
+            return PackageMetadata.FromNuspecReader(nuspecReader);
         }
     }
 }

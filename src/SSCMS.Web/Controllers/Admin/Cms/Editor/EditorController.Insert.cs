@@ -1,9 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Result;
 using SSCMS.Core.Utils;
-using SSCMS.Utils;
+using SSCMS.Dto;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Editor
 {
@@ -12,11 +10,9 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Editor
         [HttpPost, Route(Route)]
         public async Task<ActionResult<BoolResult>> Insert([FromBody] SaveRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Contents) ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentAdd))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Contents) ||
+                !await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.Add))
             {
                 return Unauthorized();
             }
@@ -26,10 +22,12 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Editor
 
             var channel = await _channelRepository.GetAsync(request.ChannelId);
             
-            var content = request.Content;
+            var content = await _pathManager.EncodeContentAsync(site, channel, request.Content);
+
             content.SiteId = site.Id;
             content.ChannelId = channel.Id;
-            content.LastEditAdminId = await _authManager.GetAdminIdAsync();
+            content.AdminId = _authManager.AdminId;
+            content.LastEditAdminId = _authManager.AdminId;
 
             content.Checked = request.Content.CheckedLevel >= site.CheckContentLevel;
             if (content.Checked)
@@ -46,6 +44,9 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Editor
                     await ContentUtility.TranslateAsync(_pathManager, _databaseManager, _pluginManager, site, content.ChannelId, content.Id, translation.TransSiteId, translation.TransChannelId, translation.TransType, _createManager);
                 }
             }
+
+            await _createManager.CreateContentAsync(request.SiteId, channel.Id, content.Id);
+            await _createManager.TriggerContentChangedEventAsync(request.SiteId, channel.Id);
 
             return new BoolResult
             {

@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using SSCMS.Enums;
+using SSCMS.Models;
 
 namespace SSCMS
 {
     /// <summary>
     /// 为STL解析事件提供数据。
     /// </summary>
-    public class ParseEventArgs : EventArgs
+    public class ParseEventArgs
     {
         /// <summary>
         /// 初始化 <see cref="T:SSCMS.ParseEventArgs" /> 类的新实例。

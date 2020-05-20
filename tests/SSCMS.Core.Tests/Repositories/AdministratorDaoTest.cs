@@ -1,7 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using SSCMS;
-using SSCMS.Tests;
+using SSCMS.Enums;
+using SSCMS.Models;
+using SSCMS.Repositories;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,7 +11,6 @@ namespace SSCMS.Core.Tests.Repositories
     [Collection("Database collection")]
     public class UserRepositoryTest
     {
-        private readonly IntegrationTestsFixture _fixture;
         private readonly IUserRepository _userRepository;
         private readonly ITestOutputHelper _output;
 
@@ -18,43 +18,47 @@ namespace SSCMS.Core.Tests.Repositories
 
         public UserRepositoryTest(IntegrationTestsFixture fixture, ITestOutputHelper output)
         {
-            _fixture = fixture;
-            _userRepository = _fixture.Provider.GetService<IUserRepository>();
+            _userRepository = fixture.Provider.GetService<IUserRepository>();
             _output = output;
         }
 
-        [SkippableFact]
+        [Fact]
         public async Task TestInsert()
         {
-            Skip.IfNot(TestEnv.IsTestMachine);
+            var user = await _userRepository.GetByUserNameAsync(TestUserName);
+            if (user != null)
+            {
+                await _userRepository.DeleteAsync(user.Id);
+            }
 
             var userInfo = new User();
-            var (userId, errorMessage) = await _userRepository.InsertAsync(userInfo, "admin888", string.Empty);
+            string errorMessage;
+            var (entity, _) = await _userRepository.InsertAsync(userInfo, "admin888", string.Empty);
 
-            Assert.True(userId == 0);
+            Assert.Null(entity);
 
             userInfo = new User
             {
                 UserName = TestUserName
             };
 
-            (userId, errorMessage) = await _userRepository.InsertAsync(userInfo, "InsertTest", string.Empty);
+            (entity, errorMessage) = await _userRepository.InsertAsync(userInfo, "InsertTest", string.Empty);
             _output.WriteLine(errorMessage);
 
-            Assert.True(userId == 0);
+            Assert.Null(entity);
 
             userInfo = new User
             {
                 UserName = TestUserName
             };
 
-            (userId, errorMessage) = await _userRepository.InsertAsync(userInfo, "InsertTest@2", string.Empty);
-            if (userId == 0)
+            (entity, errorMessage) = await _userRepository.InsertAsync(userInfo, "InsertTest@2", string.Empty);
+            if (entity == null)
             {
                 _output.WriteLine(errorMessage);
             }
 
-            Assert.True(userId > 0);
+            Assert.NotNull(entity);
             Assert.True(!string.IsNullOrWhiteSpace(userInfo.Password));
             Assert.True(userInfo.PasswordFormat == PasswordFormat.Encrypted);
             Assert.True(!string.IsNullOrWhiteSpace(userInfo.PasswordSalt));
@@ -79,7 +83,7 @@ namespace SSCMS.Core.Tests.Repositories
             var countOfFailedLogin = userInfo.CountOfFailedLogin;
 
             await _userRepository.UpdateLastActivityDateAndCountOfLoginAsync(userInfo);
-            Assert.Equal(countOfFailedLogin, userInfo.CountOfFailedLogin - 1);
+            Assert.Equal(0, countOfFailedLogin);
 
             userInfo = await _userRepository.GetByUserNameAsync(TestUserName);
             Assert.NotNull(userInfo);

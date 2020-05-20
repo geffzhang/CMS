@@ -1,17 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
 using SSCMS.Core.Utils;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Analysis
 {
-    [Route("admin/settings/analysisUser")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class AnalysisUserController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "settings/analysisUser";
 
         private readonly IAuthManager _authManager;
         private readonly IUserRepository _userRepository;
@@ -25,9 +30,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Analysis
         [HttpPost, Route(Route)]
         public async Task<ActionResult<QueryResult>> List([FromBody] QueryRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsAnalysisUser))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsAnalysisUser))
             {
                 return Unauthorized();
             }

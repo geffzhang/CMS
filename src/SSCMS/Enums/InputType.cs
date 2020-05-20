@@ -2,7 +2,7 @@ using Datory.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace SSCMS
+namespace SSCMS.Enums
 {
     /// <summary>
     /// 表单的输入类型。
@@ -12,6 +12,8 @@ namespace SSCMS
     {
         [DataEnum(DisplayName = "文本输入框")]
         Text,
+        [DataEnum(DisplayName = "数字输入框")]
+        Number,
         [DataEnum(DisplayName = "多行文本输入框")]
         TextArea,
         [DataEnum(DisplayName = "富文本编辑器")]

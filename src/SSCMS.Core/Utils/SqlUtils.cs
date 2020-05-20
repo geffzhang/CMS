@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Text;
 using Datory;
-using SSCMS;
 using SSCMS.Utils;
 
 namespace SSCMS.Core.Utils
@@ -180,7 +179,7 @@ namespace SSCMS.Core.Utils
             {
                 retVal = $"EXTRACT({unit} FROM CURRENT_TIMESTAMP - {fieldName}) < {fieldValue}";
             }
-            
+
             return retVal;
         }
 

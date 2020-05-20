@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Datory;
 using Datory.Utils;
-using SSCMS;
 using SSCMS.Core.Utils.Serialization.Atom.Atom.Core;
 using SSCMS.Core.Utils.Serialization.Components;
+using SSCMS.Enums;
+using SSCMS.Models;
+using SSCMS.Services;
 using SSCMS.Utils;
 using FileUtils = SSCMS.Utils.FileUtils;
 
@@ -15,13 +17,15 @@ namespace SSCMS.Core.Utils.Serialization
     {
         private readonly IPathManager _pathManager;
         private readonly IDatabaseManager _databaseManager;
-        private readonly IPluginManager _pluginManager;
+        private readonly CacheUtils _caching;
+        private readonly IOldPluginManager _pluginManager;
         private readonly Site _site;
 
-        public ExportObject(IPathManager pathManager, IDatabaseManager databaseManager, IPluginManager pluginManager, Site site)
+        public ExportObject(IPathManager pathManager, IDatabaseManager databaseManager, CacheUtils caching, IOldPluginManager pluginManager, Site site)
         {
             _pathManager = pathManager;
             _databaseManager = databaseManager;
+            _caching = caching;
             _pluginManager = pluginManager;
             _site = site;
         }
@@ -156,7 +160,7 @@ namespace SSCMS.Core.Utils.Serialization
 
         public async Task ExportConfigurationAsync(string configurationFilePath)
         {
-            var configIe = new ConfigurationIe(_databaseManager, _site, configurationFilePath);
+            var configIe = new ConfigurationIe(_databaseManager, _caching, _site, configurationFilePath);
             await configIe.ExportAsync();
         }
 
@@ -166,7 +170,7 @@ namespace SSCMS.Core.Utils.Serialization
         /// <param name="filePath"></param>
         public async Task ExportTemplatesAsync(string filePath)
         {
-            var templateIe = new TemplateIe(_pathManager, _databaseManager, _site, filePath);
+            var templateIe = new TemplateIe(_pathManager, _databaseManager, _caching, _site, filePath);
             await templateIe.ExportTemplatesAsync();
         }
 
@@ -211,7 +215,7 @@ namespace SSCMS.Core.Utils.Serialization
         public async Task ExportTablesAndStylesAsync(string tableDirectoryPath)
         {
             DirectoryUtils.CreateDirectoryIfNotExists(tableDirectoryPath);
-            var styleIe = new TableStyleIe(_databaseManager, tableDirectoryPath);
+            var styleIe = new TableStyleIe(_databaseManager, _caching, tableDirectoryPath);
 
             var tableNameList = await _databaseManager.SiteRepository.GetTableNamesAsync(_pluginManager, _site);
 
@@ -253,7 +257,7 @@ namespace SSCMS.Core.Utils.Serialization
                 }
             }
 
-            var siteIe = new SiteIe(_pathManager, _databaseManager, _site, siteContentDirectoryPath);
+            var siteIe = new SiteIe(_pathManager, _databaseManager, _caching, _site, siteContentDirectoryPath);
             foreach (var channelId in allChannelIdList)
             {
                 if (!isSaveAllChannels)
@@ -304,7 +308,7 @@ namespace SSCMS.Core.Utils.Serialization
             }
 
             var sitePath = await _pathManager.GetSitePathAsync(_site);
-            var siteIe = new SiteIe(_pathManager, _databaseManager, _site, siteContentDirectoryPath);
+            var siteIe = new SiteIe(_pathManager, _databaseManager, _caching, _site, siteContentDirectoryPath);
             foreach (var channelId in allChannelIdList)
             {
                 await siteIe.ExportAsync(_site, channelId, true);
@@ -349,7 +353,7 @@ namespace SSCMS.Core.Utils.Serialization
             DirectoryUtils.DeleteDirectoryIfExists(siteContentDirectoryPath);
             DirectoryUtils.CreateDirectoryIfNotExists(siteContentDirectoryPath);
 
-            var contentIe = new ContentIe(_pathManager, _databaseManager, _site, siteContentDirectoryPath);
+            var contentIe = new ContentIe(_pathManager, _databaseManager, _caching, _site, siteContentDirectoryPath);
             var isExport = await contentIe.ExportContentsAsync(_site, channelId, contentIdArrayList, isPeriods, dateFrom, dateTo, checkedState);
             if (isExport)
             {
@@ -367,7 +371,7 @@ namespace SSCMS.Core.Utils.Serialization
             DirectoryUtils.DeleteDirectoryIfExists(siteContentDirectoryPath);
             DirectoryUtils.CreateDirectoryIfNotExists(siteContentDirectoryPath);
 
-            var contentIe = new ContentIe(_pathManager, _databaseManager, _site, siteContentDirectoryPath);
+            var contentIe = new ContentIe(_pathManager, _databaseManager, _caching, _site, siteContentDirectoryPath);
             var isExport = await contentIe.ExportContentsAsync(_site, contentInfoList);
             if (isExport)
             {

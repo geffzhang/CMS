@@ -2,18 +2,23 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Datory.Utils;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
 using SSCMS.Core.Extensions;
+using SSCMS.Enums;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.V1
 {
-    [Route("v1/channels")]
+    [Authorize(Roles = AuthTypes.Roles.Api)]
+    [Route(Constants.ApiV1Prefix)]
     public partial class ChannelsController : ControllerBase
     {
-        private const string RouteSite = "{siteId:int}";
-        private const string RouteChannel = "{siteId:int}/{channelId:int}";
+        private const string RouteSite = "channels/{siteId:int}";
+        private const string RouteChannel = "channels/{siteId:int}/{channelId:int}";
 
         private readonly IAuthManager _authManager;
         private readonly ICreateManager _createManager;
@@ -35,11 +40,9 @@ namespace SSCMS.Web.Controllers.V1
         [HttpPost, Route(RouteSite)]
         public async Task<ActionResult<Channel>> Create([FromBody]CreateRequest request)
         {
-            var isAuth = await _authManager.IsApiAuthenticatedAsync() && await
-                             _accessTokenRepository.IsScopeAsync(_authManager.GetApiToken(), Constants.ScopeChannels) ||
-                         await _authManager.IsAdminAuthenticatedAsync() &&
-                         await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ParentId,
-                             Constants.ChannelPermissions.ChannelAdd);
+            var isAuth = await _accessTokenRepository.IsScopeAsync(_authManager.ApiToken, Constants.ScopeChannels) ||
+                         _authManager.IsAdmin &&
+                         await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ParentId, AuthTypes.SiteChannelPermissions.Add);
             if (!isAuth) return Unauthorized();
 
             var site = await _siteRepository.GetAsync(request.SiteId);
@@ -148,11 +151,9 @@ namespace SSCMS.Web.Controllers.V1
         [HttpPut, Route(RouteChannel)]
         public async Task<ActionResult<Channel>> Update([FromBody] UpdateRequest request)
         {
-            var isAuth = await _authManager.IsApiAuthenticatedAsync() && await
-                             _accessTokenRepository.IsScopeAsync(_authManager.GetApiToken(), Constants.ScopeChannels) ||
-                         await _authManager.IsAdminAuthenticatedAsync() &&
-                         await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId,
-                             Constants.ChannelPermissions.ChannelEdit);
+            var isAuth = await _accessTokenRepository.IsScopeAsync(_authManager.ApiToken, Constants.ScopeChannels) ||
+                         _authManager.IsAdmin &&
+                         await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteChannelPermissions.Edit);
             if (!isAuth) return Unauthorized();
 
             var site = await _siteRepository.GetAsync(request.SiteId);
@@ -310,11 +311,10 @@ namespace SSCMS.Web.Controllers.V1
         [HttpDelete, Route(RouteChannel)]
         public async Task<ActionResult<Channel>> Delete(int siteId, int channelId)
         {
-            var isAuth = await _authManager.IsApiAuthenticatedAsync() && await
-                             _accessTokenRepository.IsScopeAsync(_authManager.GetApiToken(), Constants.ScopeChannels) ||
-                         await _authManager.IsAdminAuthenticatedAsync() &&
+            var isAuth = await _accessTokenRepository.IsScopeAsync(_authManager.ApiToken, Constants.ScopeChannels) ||
+                         _authManager.IsAdmin &&
                          await _authManager.HasChannelPermissionsAsync(siteId, channelId,
-                             Constants.ChannelPermissions.ChannelDelete);
+                             AuthTypes.SiteChannelPermissions.Delete);
             if (!isAuth) return Unauthorized();
 
             var site = await _siteRepository.GetAsync(siteId);
@@ -323,7 +323,7 @@ namespace SSCMS.Web.Controllers.V1
             var channel = await _channelRepository.GetAsync(channelId);
             if (channel == null) return NotFound();
 
-            var adminId = await _authManager.GetAdminIdAsync();
+            var adminId = _authManager.AdminId;
             await _contentRepository.RecycleAllAsync(site, channelId, adminId);
             await _channelRepository.DeleteAsync(site, channelId, adminId);
 
@@ -333,9 +333,8 @@ namespace SSCMS.Web.Controllers.V1
         [HttpGet, Route(RouteChannel)]
         public async Task<ActionResult<Channel>> Get(int siteId, int channelId)
         {
-            var isAuth = await _authManager.IsApiAuthenticatedAsync() && await
-                             _accessTokenRepository.IsScopeAsync(_authManager.GetApiToken(), Constants.ScopeChannels) ||
-                         await _authManager.IsAdminAuthenticatedAsync();
+            var isAuth = await _accessTokenRepository.IsScopeAsync(_authManager.ApiToken, Constants.ScopeChannels) ||
+                         _authManager.IsAdmin;
             if (!isAuth) return Unauthorized();
 
             var site = await _siteRepository.GetAsync(siteId);
@@ -352,9 +351,8 @@ namespace SSCMS.Web.Controllers.V1
         [HttpGet, Route(RouteSite)]
         public async Task<ActionResult<List<IDictionary<string, object>>>> GetChannels(int siteId)
         {
-            var isAuth = await _authManager.IsApiAuthenticatedAsync() && await
-                             _accessTokenRepository.IsScopeAsync(_authManager.GetApiToken(), Constants.ScopeChannels) ||
-                         await _authManager.IsAdminAuthenticatedAsync();
+            var isAuth = await _accessTokenRepository.IsScopeAsync(_authManager.ApiToken, Constants.ScopeChannels) ||
+                         _authManager.IsAdmin;
             if (!isAuth) return Unauthorized();
 
             var site = await _siteRepository.GetAsync(siteId);

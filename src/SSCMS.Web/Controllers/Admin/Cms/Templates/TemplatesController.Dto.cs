@@ -1,8 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
 using SSCMS.Dto;
+using SSCMS.Enums;
+using SSCMS.Models;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Templates
 {

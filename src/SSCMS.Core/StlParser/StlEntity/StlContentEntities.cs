@@ -2,10 +2,11 @@
 using System.Threading.Tasks;
 using Datory;
 using Datory.Utils;
-using SSCMS;
 using SSCMS.Core.StlParser.Model;
 using SSCMS.Core.StlParser.Utility;
 using SSCMS.Core.Utils;
+using SSCMS.Enums;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Core.StlParser.StlEntity
@@ -15,17 +16,17 @@ namespace SSCMS.Core.StlParser.StlEntity
     {
         public const string EntityName = "content";
 
-        public const string Id = nameof(SSCMS.Content.Id);
-        public const string Title = nameof(SSCMS.Content.Title);
+        public const string Id = nameof(Models.Content.Id);
+        public const string Title = nameof(Models.Content.Title);
         public const string FullTitle = "FullTitle";
         public const string NavigationUrl = "NavigationUrl";
-        public const string ImageUrl = nameof(SSCMS.Content.ImageUrl);
-        public const string VideoUrl = nameof(SSCMS.Content.VideoUrl);
-        public const string FileUrl = nameof(SSCMS.Content.FileUrl);
+        public const string ImageUrl = nameof(Models.Content.ImageUrl);
+        public const string VideoUrl = nameof(Models.Content.VideoUrl);
+        public const string FileUrl = nameof(Models.Content.FileUrl);
         public const string DownloadUrl = "DownloadUrl";
-        public const string AddDate = nameof(SSCMS.Content.AddDate);
-        public const string LastModifiedDate = nameof(SSCMS.Content.LastModifiedDate);
-        public const string Content = nameof(SSCMS.Content.Body);
+        public const string AddDate = nameof(Models.Content.AddDate);
+        public const string LastModifiedDate = nameof(Models.Content.LastModifiedDate);
+        public const string Body = nameof(Models.Content.Body);
         public const string Group = "Group";
         public const string Tags = "Tags";
         public const string ItemIndex = "ItemIndex";
@@ -35,7 +36,7 @@ namespace SSCMS.Core.StlParser.StlEntity
             {Id, "内容ID"},
             {Title, "内容标题"},
             {FullTitle, "内容标题全称"},
-            {Content, "内容正文"},
+            {Body, "内容正文"},
             {NavigationUrl, "内容链接地址"},
             {ImageUrl, "内容图片地址"},
             {VideoUrl, "内容视频地址"},
@@ -82,7 +83,7 @@ namespace SSCMS.Core.StlParser.StlEntity
                     var entityName = StlParserUtility.GetNameFromEntity(stlEntity);
                     var attributeName = entityName.Substring(9, entityName.Length - 10);
 
-                    if (StringUtils.EqualsIgnoreCase(nameof(SSCMS.Content.Id), attributeName))//内容ID
+                    if (StringUtils.EqualsIgnoreCase(nameof(Models.Content.Id), attributeName))//内容ID
                     {
                         if (contentInfo != null)
                         {
@@ -177,7 +178,7 @@ namespace SSCMS.Core.StlParser.StlEntity
                             parsedContent = DateUtils.Format(contentInfo.LastModifiedDate, string.Empty);
                         }
                     }
-                    else if (StringUtils.EqualsIgnoreCase(Content, attributeName))//内容正文
+                    else if (StringUtils.EqualsIgnoreCase(Body, attributeName) || StringUtils.EqualsIgnoreCase("Content", attributeName))//内容正文
                     {
                         if (contentInfo != null)
                         {

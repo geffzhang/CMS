@@ -1,8 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Datory;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
 using SSCMS.Core.Extensions;
+using SSCMS.Core.Utils;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin
@@ -13,8 +13,8 @@ namespace SSCMS.Web.Controllers.Admin
         public async Task<ActionResult<DatabaseConnectResult>> DatabaseConnect([FromBody]DatabaseConnectRequest request)
         {
             if (!await _configRepository.IsNeedInstallAsync()) return Unauthorized();
-            
-            var connectionStringWithoutDatabaseName = GetDatabaseConnectionString(request.DatabaseType == DatabaseType.Oracle, request.DatabaseType, request.DatabaseHost, request.IsDatabaseDefaultPort, TranslateUtils.ToInt(request.DatabasePort), request.DatabaseUserName, request.DatabasePassword, string.Empty, request.OracleDatabase, request.OracleIsSid, request.OraclePrivilege);
+
+            var connectionStringWithoutDatabaseName = InstallUtils.GetDatabaseConnectionString(request.DatabaseType, request.DatabaseHost, request.IsDatabaseDefaultPort, TranslateUtils.ToInt(request.DatabasePort), request.DatabaseUserName, request.DatabasePassword, string.Empty);
 
             var db = new Database(request.DatabaseType, connectionStringWithoutDatabaseName);
 

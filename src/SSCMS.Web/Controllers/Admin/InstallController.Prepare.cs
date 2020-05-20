@@ -1,9 +1,9 @@
 ﻿using System.Threading.Tasks;
 using Datory;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Result;
 using SSCMS.Core.Extensions;
+using SSCMS.Core.Utils;
+using SSCMS.Dto;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin
@@ -25,24 +25,26 @@ namespace SSCMS.Web.Controllers.Admin
 
             if (request.DatabaseType == DatabaseType.SQLite)
             {
-                var filePath = PathUtils.Combine(_settingsManager.WebRootPath, DirectoryUtils.SiteFilesDirectoryName, Constants.DefaultLocalDbFileName);
+                var filePath = PathUtils.Combine(_settingsManager.ContentRootPath, Constants.DefaultLocalDbFileName);
                 if (!FileUtils.IsFileExists(filePath))
                 {
                     await FileUtils.WriteTextAsync(filePath, string.Empty);
                 }
             }
 
-            var securityKey = StringUtils.GetShortGuid();
-            var databaseConnectionString = GetDatabaseConnectionString(true, request.DatabaseType, request.DatabaseHost, request.IsDatabaseDefaultPort, TranslateUtils.ToInt(request.DatabasePort), request.DatabaseUserName, request.DatabasePassword, request.DatabaseName, request.OracleDatabase, request.OracleIsSid, request.OraclePrivilege);
-            var redisConnectionString = GetRedisConnectionString(request);
+            var databaseConnectionString = InstallUtils.GetDatabaseConnectionString(request.DatabaseType, request.DatabaseHost, request.IsDatabaseDefaultPort, TranslateUtils.ToInt(request.DatabasePort), request.DatabaseUserName, request.DatabasePassword, request.DatabaseName);
+            var redisConnectionString = string.Empty;
+            if (request.IsRedis)
+            {
+                redisConnectionString = InstallUtils.GetRedisConnectionString(request.RedisHost, request.IsRedisDefaultPort, request.RedisPort, request.IsSsl, request.RedisPassword);
+            }
 
-            await _settingsManager.SaveSettingsAsync(false, request.IsProtectData, Constants.DefaultAdminDirectory,
-                Constants.DefaultHomeDirectory, securityKey, request.DatabaseType, databaseConnectionString,
+            _settingsManager.SaveSettings(false, request.IsProtectData, request.DatabaseType, databaseConnectionString,
                 redisConnectionString);
 
             return new StringResult
             {
-                Value = securityKey
+                Value = _settingsManager.SecurityKey
             };
         }
     }

@@ -1,22 +1,26 @@
 ﻿using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Request;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
 using SSCMS.Core.Utils.Office;
+using SSCMS.Dto;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Library
 {
-    [Route("admin/cms/library/libraryLayerWord")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class LibraryLayerWordController : ControllerBase
     {
-        private const string Route = "";
-        private const string RouteUpload = "actions/upload";
+        private const string Route = "cms/library/libraryLayerWord";
+        private const string RouteUpload = "cms/library/libraryLayerWord/actions/upload";
 
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
@@ -32,10 +36,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Library
         [HttpPost, Route(RouteUpload)]
         public async Task<ActionResult<UploadResult>> Upload([FromQuery]SiteRequest request, [FromForm] IFormFile file)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Library))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.LibraryText))
             {
                 return Unauthorized();
             }
@@ -70,11 +72,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Library
         [HttpPost, Route(Route)]
         public async Task<ActionResult<StringResult>> Submit([FromBody] SubmitRequest request)
         {
-            
-
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Library))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.LibraryText))
             {
                 return Unauthorized();
             }

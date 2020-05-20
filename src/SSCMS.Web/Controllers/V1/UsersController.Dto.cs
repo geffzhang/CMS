@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using SSCMS;
+using SSCMS.Models;
 
 namespace SSCMS.Web.Controllers.V1
 {
@@ -33,14 +33,13 @@ namespace SSCMS.Web.Controllers.V1
             /// <summary>
             /// 下次自动登录
             /// </summary>
-            public bool IsAutoLogin { get; set; }
+            public bool IsPersistent { get; set; }
         }
 
         public class LoginResult
         {
             public User User { get; set; }
             public string AccessToken { get; set; }
-            public DateTime? ExpiresAt { get; set; }
         }
 
         public class GetLogsRequest
@@ -52,7 +51,7 @@ namespace SSCMS.Web.Controllers.V1
         public class GetLogsResult
         {
             public int Count { get; set; }
-            public List<UserLog> Logs { get; set; }
+            public List<Log> Logs { get; set; }
         }
 
         public class ResetPasswordRequest

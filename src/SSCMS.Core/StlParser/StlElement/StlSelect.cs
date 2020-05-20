@@ -2,10 +2,11 @@
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SSCMS;
 using SSCMS.Core.StlParser.Mock;
 using SSCMS.Core.StlParser.Model;
 using SSCMS.Core.StlParser.Utility;
+using SSCMS.Enums;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Core.StlParser.StlElement
@@ -295,7 +296,7 @@ selObj.selectedIndex=0;
                 }
                 else
                 {
-                    var minContentInfoList = await databaseManager.ContentRepository.GetMinContentInfoListAsync(parseManager.DatabaseManager, parseManager.PluginManager, pageInfo.Site, channelId, contextInfo.ContentId, groupContent, groupContentNot, tags, false, false, false, false, false, false, false, 1, totalNum, orderByString, isTopExists, isTop, isRecommendExists, isRecommend, isHotExists, isHot, isColorExists, isColor, scopeType, groupChannel, groupChannelNot, null);
+                    var minContentInfoList = await databaseManager.ContentRepository.GetMinContentInfoListAsync(parseManager.DatabaseManager, parseManager.OldPluginManager, pageInfo.Site, channelId, contextInfo.ContentId, groupContent, groupContentNot, tags, false, false, false, false, false, false, false, 1, totalNum, orderByString, isTopExists, isTop, isRecommendExists, isRecommend, isHotExists, isHot, isColorExists, isColor, scopeType, groupChannel, groupChannelNot, null);
 
                     if (minContentInfoList != null)
                     {

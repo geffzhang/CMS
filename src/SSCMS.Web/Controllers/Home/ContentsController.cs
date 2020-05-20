@@ -2,29 +2,38 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
 using SSCMS.Core.Utils;
+using SSCMS.Dto;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Home
 {
-    [Route("home/contents")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.User)]
+    [Route(Constants.ApiHomePrefix)]
     public partial class ContentsController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "contents";
 
         private readonly IAuthManager _authManager;
-        private readonly IPluginManager _pluginManager;
+        private readonly IConfigRepository _configRepository;
+        private readonly IOldPluginManager _pluginManager;
         private readonly IDatabaseManager _databaseManager;
         private readonly IPathManager _pathManager;
         private readonly ISiteRepository _siteRepository;
         private readonly IChannelRepository _channelRepository;
         private readonly IContentRepository _contentRepository;
 
-        public ContentsController(IAuthManager authManager, IPluginManager pluginManager, IDatabaseManager databaseManager, IPathManager pathManager, ISiteRepository siteRepository, IChannelRepository channelRepository, IContentRepository contentRepository)
+        public ContentsController(IAuthManager authManager, IConfigRepository configRepository, IOldPluginManager pluginManager, IDatabaseManager databaseManager, IPathManager pathManager, ISiteRepository siteRepository, IChannelRepository channelRepository, IContentRepository contentRepository)
         {
             _authManager = authManager;
+            _configRepository = configRepository;
             _pluginManager = pluginManager;
             _databaseManager = databaseManager;
             _pathManager = pathManager;
@@ -34,10 +43,93 @@ namespace SSCMS.Web.Controllers.Home
         }
 
         [HttpGet, Route(Route)]
+        public async Task<ActionResult<GetResult>> Get([FromQuery]ChannelRequest request)
+        {
+            var sites = new List<SiteResult>();
+            var channels = new List<ChannelResult>();
+            SiteResult siteResult = null;
+            ChannelResult channelResult = null;
+
+            if (_authManager.IsUser)
+            {
+                Site site = null;
+                Channel channelInfo = null;
+                var siteIdList = await _authManager.GetSiteIdsAsync();
+                foreach (var siteId in siteIdList)
+                {
+                    var permissionSite = await _siteRepository.GetAsync(siteId);
+                    if (request.SiteId == siteId)
+                    {
+                        site = permissionSite;
+                    }
+                    sites.Add(new SiteResult
+                    {
+                        Id = permissionSite.Id,
+                        SiteName = permissionSite.SiteName
+                    });
+                }
+
+                if (site == null && siteIdList.Count > 0)
+                {
+                    site = await _siteRepository.GetAsync(siteIdList[0]);
+                }
+
+                if (site != null)
+                {
+                    var channelIdList = await _authManager.GetChannelIdsAsync(site.Id,
+                        AuthTypes.SiteContentPermissions.Add);
+                    foreach (var permissionChannelId in channelIdList)
+                    {
+                        var permissionChannelInfo = await _channelRepository.GetAsync(permissionChannelId);
+                        if (channelInfo == null || request.ChannelId == permissionChannelId)
+                        {
+                            channelInfo = permissionChannelInfo;
+                        }
+
+                        channels.Add(new ChannelResult
+                        {
+                            Id = permissionChannelInfo.Id,
+                            ChannelName =
+                                await _channelRepository.GetChannelNameNavigationAsync(site.Id, permissionChannelId)
+                        });
+                    }
+
+                    siteResult = new SiteResult
+                    {
+                        Id = site.Id,
+                        SiteName = site.SiteName,
+                        SiteUrl = await _pathManager.GetSiteUrlAsync(site, false)
+                    };
+                }
+
+                if (channelInfo != null)
+                {
+                    channelResult = new ChannelResult
+                    {
+                        Id = channelInfo.Id,
+                        ChannelName = await _channelRepository.GetChannelNameNavigationAsync(site.Id, channelInfo.Id)
+                    };
+                }
+            }
+
+            var config = await _configRepository.GetAsync();
+            var user = await _authManager.GetUserAsync();
+
+            return new GetResult
+            {
+                User = user,
+                Config = config,
+                Sites = sites,
+                Channels = channels,
+                Site = siteResult,
+                Channel = channelResult
+            };
+        }
+
+        [HttpPost, Route(Route)]
         public async Task<ActionResult<ListResult>> List([FromQuery]ListRequest request)
         {
-            if (!await _authManager.IsUserAuthenticatedAsync() ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentView))
+            if (!await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.View))
             {
                 return Unauthorized();
             }
@@ -78,13 +170,13 @@ namespace SSCMS.Web.Controllers.Home
 
             var userPermissions = new Permissions
             {
-                IsAdd = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentAdd),
-                IsDelete = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentDelete),
-                IsEdit = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentEdit),
-                IsTranslate = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentTranslate),
-                IsCheck = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ContentCheckLevel1),
-                IsCreate = await _authManager.HasSitePermissionsAsync(site.Id, Constants.SitePermissions.CreateContents) || await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.CreatePage),
-                IsChannelEdit = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, Constants.ChannelPermissions.ChannelEdit)
+                IsAdd = await _authManager.HasContentPermissionsAsync(site.Id, channel.Id, AuthTypes.SiteContentPermissions.Add),
+                IsDelete = await _authManager.HasContentPermissionsAsync(site.Id, channel.Id, AuthTypes.SiteContentPermissions.Delete),
+                IsEdit = await _authManager.HasContentPermissionsAsync(site.Id, channel.Id, AuthTypes.SiteContentPermissions.Edit),
+                IsTranslate = await _authManager.HasContentPermissionsAsync(site.Id, channel.Id, AuthTypes.SiteContentPermissions.Translate),
+                IsCheck = await _authManager.HasContentPermissionsAsync(site.Id, channel.Id, AuthTypes.SiteContentPermissions.CheckLevel1),
+                IsCreate = await _authManager.HasSitePermissionsAsync(site.Id, AuthTypes.SitePermissions.CreateContents) || await _authManager.HasContentPermissionsAsync(site.Id, channel.Id, AuthTypes.SiteContentPermissions.Create),
+                IsChannelEdit = await _authManager.HasChannelPermissionsAsync(site.Id, channel.Id, AuthTypes.SiteChannelPermissions.Edit)
             };
 
             return new ListResult

@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using SSCMS;
 using SSCMS.Dto;
-using SSCMS.Utils;
-using Content = SSCMS.Content;
+using SSCMS.Models;
+using SSCMS.Services;
 
 namespace SSCMS.Core.Utils
 {
@@ -643,20 +642,20 @@ namespace SSCMS.Core.Utils
 	        return retVal;
 	    }
 
-        public static async Task<KeyValuePair<bool, int>> GetUserCheckLevelPairAsync(IPermissions permissionsImpl, Site site, int channelId)
+        public static async Task<KeyValuePair<bool, int>> GetUserCheckLevelPairAsync(IAuthManager authManager, Site site, int channelId)
         {
-            if (await permissionsImpl.IsSiteAdminAsync())
+            if (await authManager.IsSiteAdminAsync())
             {
                 return new KeyValuePair<bool, int>(true, site.CheckContentLevel);
             }
 
             var isChecked = false;
             var checkedLevel = 0;
-			if (await permissionsImpl.HasChannelPermissionsAsync(site.Id, channelId, Constants.ChannelPermissions.ContentCheckLevel5))
+			if (await authManager.HasContentPermissionsAsync(site.Id, channelId, AuthTypes.SiteContentPermissions.CheckLevel5))
 			{
 				isChecked = true;
 			}
-			else if (await permissionsImpl.HasChannelPermissionsAsync(site.Id, channelId, Constants.ChannelPermissions.ContentCheckLevel4))
+			else if (await authManager.HasContentPermissionsAsync(site.Id, channelId, AuthTypes.SiteContentPermissions.CheckLevel4))
 			{
 				if (site.CheckContentLevel <= 4)
 				{
@@ -667,7 +666,7 @@ namespace SSCMS.Core.Utils
 					checkedLevel = 4;
 				}
 			}
-			else if (await permissionsImpl.HasChannelPermissionsAsync(site.Id, channelId, Constants.ChannelPermissions.ContentCheckLevel3))
+			else if (await authManager.HasContentPermissionsAsync(site.Id, channelId, AuthTypes.SiteContentPermissions.CheckLevel3))
 			{
 				if (site.CheckContentLevel <= 3)
 				{
@@ -678,7 +677,7 @@ namespace SSCMS.Core.Utils
 					checkedLevel = 3;
 				}
 			}
-			else if (await permissionsImpl.HasChannelPermissionsAsync(site.Id, channelId, Constants.ChannelPermissions.ContentCheckLevel2))
+			else if (await authManager.HasContentPermissionsAsync(site.Id, channelId, AuthTypes.SiteContentPermissions.CheckLevel2))
 			{
 				if (site.CheckContentLevel <= 2)
 				{
@@ -689,7 +688,7 @@ namespace SSCMS.Core.Utils
 					checkedLevel = 2;
 				}
 			}
-			else if (await permissionsImpl.HasChannelPermissionsAsync(site.Id, channelId, Constants.ChannelPermissions.ContentCheckLevel1))
+			else if (await authManager.HasContentPermissionsAsync(site.Id, channelId, AuthTypes.SiteContentPermissions.CheckLevel1))
 			{
 				if (site.CheckContentLevel <= 1)
 				{
@@ -707,11 +706,11 @@ namespace SSCMS.Core.Utils
 			return new KeyValuePair<bool, int>(isChecked, checkedLevel);
         }
 
-        public static async Task<(bool IsChecked, int UserCheckedLevel)> GetUserCheckLevelAsync(IPermissions permissionsImpl, Site site, int channelId)
+        public static async Task<(bool IsChecked, int UserCheckedLevel)> GetUserCheckLevelAsync(IAuthManager authManager, Site site, int channelId)
         {
             var checkContentLevel = site.CheckContentLevel;
 
-            var pair = await GetUserCheckLevelPairAsync(permissionsImpl, site, channelId);
+            var pair = await GetUserCheckLevelPairAsync(authManager, site, channelId);
             var isChecked = pair.Key;
             var checkedLevel = pair.Value;
             if (isChecked)

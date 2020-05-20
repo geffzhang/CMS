@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Utils;
+using SSCMS.Models;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Settings
 {
@@ -13,10 +12,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpGet, Route(RouteItems)]
         public async Task<ActionResult<ItemsResult>> GetItems([FromQuery] ItemsRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.ConfigTableStyles))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.SettingsStyleRelatedField))
             {
                 return Unauthorized();
             }
@@ -33,10 +30,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpPost, Route(RouteItems)]
         public async Task<ActionResult<ItemsResult>> AddItems([FromBody] ItemsAddRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.ConfigTableStyles))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.SettingsStyleRelatedField))
             {
                 return Unauthorized();
             }
@@ -69,10 +64,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpPut, Route(RouteItems)]
         public async Task<ActionResult<ItemsResult>> EditItem([FromBody] ItemsEditRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.ConfigTableStyles))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.SettingsStyleRelatedField))
             {
                 return Unauthorized();
             }
@@ -97,10 +90,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpDelete, Route(RouteItems)]
         public async Task<ActionResult<ItemsResult>> DeleteItem([FromBody] ItemsDeleteRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.ConfigTableStyles))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.SettingsStyleRelatedField))
             {
                 return Unauthorized();
             }
@@ -121,10 +112,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpPost, Route(RouteItemsOrder)]
         public async Task<ActionResult<ItemsResult>> OrderItem([FromBody] ItemsOrderRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.ConfigTableStyles))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.SettingsStyleRelatedField))
             {
                 return Unauthorized();
             }

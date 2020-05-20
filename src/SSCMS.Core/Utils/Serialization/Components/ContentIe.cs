@@ -5,9 +5,10 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Datory.Utils;
-using SSCMS;
 using SSCMS.Core.Utils.Serialization.Atom.Atom.Core;
 using SSCMS.Core.Utils.Serialization.Atom.Atom.Core.Collections;
+using SSCMS.Models;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Core.Utils.Serialization.Components
@@ -16,13 +17,15 @@ namespace SSCMS.Core.Utils.Serialization.Components
     {
         private readonly IPathManager _pathManager;
         private readonly IDatabaseManager _databaseManager;
+        private readonly CacheUtils _caching;
         private readonly Site _site;
         private readonly string _siteContentDirectoryPath;
 
-        public ContentIe(IPathManager pathManager, IDatabaseManager databaseManager, Site site, string siteContentDirectoryPath)
+        public ContentIe(IPathManager pathManager, IDatabaseManager databaseManager, CacheUtils caching, Site site, string siteContentDirectoryPath)
         {
             _pathManager = pathManager;
             _databaseManager = databaseManager;
+            _caching = caching;
             _siteContentDirectoryPath = siteContentDirectoryPath;
             _site = site;
         }
@@ -208,7 +211,7 @@ namespace SSCMS.Core.Utils.Serialization.Components
 
             foreach (var content in contents)
             {
-                Caching.SetProcess(guid, $"导入内容: {content.Title}");
+                _caching.SetProcess(guid, $"导入内容: {content.Title}");
                 if (content.Id > 0)
                 {
                     await _databaseManager.ContentRepository.UpdateAsync(_site, channel, content);

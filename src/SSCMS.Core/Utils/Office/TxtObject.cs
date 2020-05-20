@@ -1,5 +1,6 @@
 using System.Collections.Generic;
-using SSCMS;
+using SSCMS.Enums;
+using SSCMS.Models;
 using SSCMS.Utils;
 
 namespace SSCMS.Core.Utils.Office

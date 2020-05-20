@@ -2,18 +2,25 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Datory;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
+using SSCMS.Configuration;
 using SSCMS.Dto;
-using SSCMS.Dto.Result;
+using SSCMS.Enums;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Shared
 {
-    [Route("admin/shared/tableStyleLayerValidate")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class TableStyleLayerValidateController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "shared/tableStyleLayerValidate";
 
         private readonly IAuthManager _authManager;
         private readonly ITableStyleRepository _tableStyleRepository;
@@ -27,9 +34,6 @@ namespace SSCMS.Web.Controllers.Admin.Shared
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery]GetRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync()) return Unauthorized();
-
             var style = await _tableStyleRepository.GetTableStyleAsync(request.TableName, request.AttributeName, request.RelatedIdentities);
 
             var options = TranslateUtils.GetEnums<ValidateType>().Select(validateType =>
@@ -38,16 +42,13 @@ namespace SSCMS.Web.Controllers.Admin.Shared
             return new GetResult
             {
                 Options = options,
-                Rules = TranslateUtils.JsonDeserialize<IEnumerable<TableStyleRule>>(style.RuleValues)
+                Rules = TranslateUtils.JsonDeserialize<IEnumerable<InputStyleRule>>(style.RuleValues)
             };
         }
 
         [HttpPost, Route(Route)]
         public async Task<ActionResult<BoolResult>> Submit([FromBody] SubmitRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync()) return Unauthorized();
-
             var style =
                 await _tableStyleRepository.GetTableStyleAsync(request.TableName, request.AttributeName, request.RelatedIdentities);
             style.RuleValues = TranslateUtils.JsonSerialize(request.Rules);

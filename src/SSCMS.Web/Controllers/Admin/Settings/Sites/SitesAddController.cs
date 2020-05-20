@@ -1,39 +1,49 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using CacheManager.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
 using SSCMS.Dto;
-using SSCMS.Dto.Result;
 using SSCMS.Core.Extensions;
 using SSCMS.Core.Utils;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Sites
 {
-    [Route(Constants.ApiRoute)]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class SitesAddController : ControllerBase
     {
         public const string Route = "settings/sitesAdd";
         private const string RouteProcess = "settings/sitesAdd/actions/process";
 
+        private readonly ICacheManager<CacheUtils.Process> _cacheManager;
         private readonly ISettingsManager _settingsManager;
+        private readonly IPluginManager _pluginManager;
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
         private readonly ICreateManager _createManager;
         private readonly IDatabaseManager _databaseManager;
-        private readonly IPluginManager _pluginManager;
+        private readonly IOldPluginManager _oldPluginManager;
         private readonly ISiteRepository _siteRepository;
         private readonly IContentRepository _contentRepository;
         private readonly IAdministratorRepository _administratorRepository;
 
-        public SitesAddController(ISettingsManager settingsManager, IAuthManager authManager, IPathManager pathManager, ICreateManager createManager, IDatabaseManager databaseManager, IPluginManager pluginManager, ISiteRepository siteRepository, IContentRepository contentRepository, IAdministratorRepository administratorRepository)
+        public SitesAddController(ICacheManager<CacheUtils.Process> cacheManager, ISettingsManager settingsManager, IPluginManager pluginManager, IAuthManager authManager, IPathManager pathManager, ICreateManager createManager, IDatabaseManager databaseManager, IOldPluginManager oldPluginManager, ISiteRepository siteRepository, IContentRepository contentRepository, IAdministratorRepository administratorRepository)
         {
+            _cacheManager = cacheManager;
             _settingsManager = settingsManager;
+            _pluginManager = pluginManager;
             _authManager = authManager;
             _pathManager = pathManager;
             _createManager = createManager;
             _databaseManager = databaseManager;
-            _pluginManager = pluginManager;
+            _oldPluginManager = oldPluginManager;
             _siteRepository = siteRepository;
             _contentRepository = contentRepository;
             _administratorRepository = administratorRepository;
@@ -42,17 +52,16 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSitesAdd))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsSitesAdd))
             {
                 return Unauthorized();
             }
 
-            var manager = new SiteTemplateManager(_pathManager, _pluginManager, _databaseManager);
+            var caching = new CacheUtils(_cacheManager);
+            var manager = new SiteTemplateManager(_pathManager, _oldPluginManager, _databaseManager, caching);
             var siteTemplates = manager.GetSiteTemplateInfoList();
 
-            var tableNameList = await _siteRepository.GetSiteTableNamesAsync(_pluginManager);
+            var tableNameList = await _siteRepository.GetSiteTableNamesAsync(_oldPluginManager);
 
             var rootExists = await _siteRepository.GetSiteByIsRootAsync() != null;
 
@@ -63,8 +72,11 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
                 Label = "<无上级站点>"
             });
 
+            var siteTypes = _pluginManager.GetSiteTypes();
+
             return new GetResult
             {
+                SiteTypes = siteTypes,
                 SiteTemplates = siteTemplates,
                 RootExists = rootExists,
                 Sites = sites,
@@ -76,8 +88,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
         [HttpPost, Route(Route)]
         public async Task<ActionResult<IntResult>> Submit([FromBody] SubmitRequest request)
         {
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSitesAdd))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsSitesAdd))
             {
                 return Unauthorized();
             }
@@ -112,29 +123,33 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
             channelInfo.ContentModelPluginId = string.Empty;
 
             var tableName = string.Empty;
-            if (request.TableRule == TableRule.Choose)
+            if (request.SiteType == AuthTypes.Resources.Site)
             {
-                tableName = request.TableChoose;
-            }
-            else if (request.TableRule == TableRule.HandWrite)
-            {
-                tableName = request.TableHandWrite;
-
-                if (!await _settingsManager.Database.IsTableExistsAsync(tableName))
+                if (request.TableRule == TableRule.Choose)
                 {
-                    await _contentRepository.CreateContentTableAsync(tableName, _contentRepository.GetTableColumns(tableName));
+                    tableName = request.TableChoose;
                 }
-                else
+                else if (request.TableRule == TableRule.HandWrite)
                 {
-                    await _settingsManager.Database.AlterTableAsync(tableName, _contentRepository.GetTableColumns(tableName));
+                    tableName = request.TableHandWrite;
+
+                    if (!await _settingsManager.Database.IsTableExistsAsync(tableName))
+                    {
+                        await _contentRepository.CreateContentTableAsync(tableName, _contentRepository.GetTableColumns(tableName));
+                    }
+                    else
+                    {
+                        await _settingsManager.Database.AlterTableAsync(tableName, _contentRepository.GetTableColumns(tableName));
+                    }
                 }
             }
 
-            var adminId = await _authManager.GetAdminIdAsync();
+            var adminId = _authManager.AdminId;
 
             var siteId = await _siteRepository.InsertSiteAsync(_pathManager, channelInfo, new Site
             {
                 SiteName = request.SiteName,
+                SiteType = request.SiteType,
                 SiteDir = request.SiteDir,
                 TableName = tableName,
                 ParentId = request.ParentId,
@@ -149,53 +164,54 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
 
             if (await _authManager.IsSiteAdminAsync() && !await _authManager.IsSuperAdminAsync())
             {
-                var siteIdList = await _authManager.GetSiteIdListAsync() ?? new List<int>();
+                var siteIdList = await _authManager.GetSiteIdsAsync() ?? new List<int>();
                 siteIdList.Add(siteId);
                 var adminInfo = await _administratorRepository.GetByUserIdAsync(adminId);
                 await _administratorRepository.UpdateSiteIdsAsync(adminInfo, siteIdList);
             }
 
+            var caching = new CacheUtils(_cacheManager);
             var site = await _siteRepository.GetAsync(siteId);
 
-            Caching.SetProcess(request.Guid, "任务初始化...");
+            caching.SetProcess(request.Guid, "任务初始化...");
 
             if (request.CreateType == "local")
             {
-                var manager = new SiteTemplateManager(_pathManager, _pluginManager, _databaseManager);
+                var manager = new SiteTemplateManager(_pathManager, _oldPluginManager, _databaseManager, caching);
                 await manager.ImportSiteTemplateToEmptySiteAsync(site, request.CreateTemplateId, request.IsImportContents, request.IsImportTableStyles, adminId, request.Guid);
 
-                Caching.SetProcess(request.Guid, "生成站点页面...");
+                caching.SetProcess(request.Guid, "生成站点页面...");
                 await _createManager.CreateByAllAsync(site.Id);
 
-                Caching.SetProcess(request.Guid, "清除系统缓存...");
-                CacheUtils.ClearAll();
+                caching.SetProcess(request.Guid, "清除系统缓存...");
+                _cacheManager.Clear();
             }
             else if (request.CreateType == "cloud")
             {
-                Caching.SetProcess(request.Guid, "开始下载模板压缩包，可能需要几分钟，请耐心等待...");
+                caching.SetProcess(request.Guid, "开始下载模板压缩包，可能需要几分钟，请耐心等待...");
 
                 var filePath = _pathManager.GetSiteTemplatesPath($"T_{request.CreateTemplateId}.zip");
                 FileUtils.DeleteFileIfExists(filePath);
                 var downloadUrl = OnlineTemplateManager.GetDownloadUrl(request.CreateTemplateId);
                 WebClientUtils.SaveRemoteFileToLocal(downloadUrl, filePath);
 
-                Caching.SetProcess(request.Guid, "模板压缩包下载成功，开始解压缩，可能需要几分钟，请耐心等待...");
+                caching.SetProcess(request.Guid, "模板压缩包下载成功，开始解压缩，可能需要几分钟，请耐心等待...");
 
                 var siteTemplateDir = $"T_{request.CreateTemplateId}";
                 var directoryPath = _pathManager.GetSiteTemplatesPath(siteTemplateDir);
                 DirectoryUtils.DeleteDirectoryIfExists(directoryPath);
                 ZipUtils.ExtractZip(filePath, directoryPath);
 
-                Caching.SetProcess(request.Guid, "模板压缩包解压成功，正在导入数据...");
+                caching.SetProcess(request.Guid, "模板压缩包解压成功，正在导入数据...");
 
-                var manager = new SiteTemplateManager(_pathManager, _pluginManager, _databaseManager);
+                var manager = new SiteTemplateManager(_pathManager, _oldPluginManager, _databaseManager, caching);
                 await manager.ImportSiteTemplateToEmptySiteAsync(site, siteTemplateDir, request.IsImportContents, request.IsImportTableStyles, adminId, request.Guid);
 
-                Caching.SetProcess(request.Guid, "生成站点页面...");
+                caching.SetProcess(request.Guid, "生成站点页面...");
                 await _createManager.CreateByAllAsync(site.Id);
 
-                Caching.SetProcess(request.Guid, "清除系统缓存...");
-                CacheUtils.ClearAll();
+                caching.SetProcess(request.Guid, "清除系统缓存...");
+                _cacheManager.Clear();
             }
 
             return new IntResult
@@ -205,16 +221,15 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
         }
 
         [HttpPost, Route(RouteProcess)]
-        public async Task<ActionResult<Caching.Process>> Process([FromBody] ProcessRequest request)
+        public async Task<ActionResult<CacheUtils.Process>> Process([FromBody] ProcessRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsSitesAdd))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsSitesAdd))
             {
                 return Unauthorized();
             }
 
-            return Caching.GetProcess(request.Guid);
+            var caching = new CacheUtils(_cacheManager);
+            return caching.GetProcess(request.Guid);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
-using SSCMS;
+using SSCMS.Configuration;
 using SSCMS.Dto;
+using SSCMS.Models;
 
 namespace SSCMS.Web.Controllers.Admin.Shared
 {
@@ -16,7 +17,7 @@ namespace SSCMS.Web.Controllers.Admin.Shared
         public class GetResult
         {
             public IEnumerable<Select<string>> Options { get; set; }
-            public IEnumerable<TableStyleRule> Rules { get; set; }
+            public IEnumerable<InputStyleRule> Rules { get; set; }
         }
 
         public class SubmitRequest
@@ -24,7 +25,7 @@ namespace SSCMS.Web.Controllers.Admin.Shared
             public string TableName { get; set; }
             public string AttributeName { get; set; }
             public List<int> RelatedIdentities { get; set; }
-            public List<TableStyleRule> Rules { get; set; }
+            public List<InputStyleRule> Rules { get; set; }
         }
     }
 }

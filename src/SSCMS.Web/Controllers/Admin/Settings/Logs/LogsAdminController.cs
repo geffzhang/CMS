@@ -1,15 +1,21 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
+using SSCMS.Dto;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Logs
 {
-    [Route("admin/settings/logsAdmin")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class LogsAdminController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "settings/logsAdmin";
 
         private readonly IAuthManager _authManager;
         private readonly IAdministratorRepository _administratorRepository;
@@ -25,9 +31,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Logs
         [HttpPost, Route(Route)]
         public async Task<ActionResult<PageResult<Log>>> List([FromBody] SearchRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsLogsAdmin))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsLogsAdmin))
             {
                 return Unauthorized();
             }
@@ -35,8 +39,8 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Logs
             var admin = await _administratorRepository.GetByUserNameAsync(request.UserName);
             var adminId = admin?.Id ?? 0;
 
-            var count = await _logRepository.GetCountAsync(adminId, request.Keyword, request.DateFrom, request.DateTo);
-            var logs = await _logRepository.GetAllAsync(adminId, request.Keyword, request.DateFrom, request.DateTo, request.Offset, request.Limit);
+            var count = await _logRepository.GetAdminLogsCountAsync(adminId, request.Keyword, request.DateFrom, request.DateTo);
+            var logs = await _logRepository.GetAdminLogsAsync(adminId, request.Keyword, request.DateFrom, request.DateTo, request.Offset, request.Limit);
 
             foreach (var log in logs)
             {
@@ -54,14 +58,12 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Logs
         [HttpDelete, Route(Route)]
         public async Task<ActionResult<BoolResult>> Delete()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsLogsAdmin))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsLogsAdmin))
             {
                 return Unauthorized();
             }
 
-            await _logRepository.DeleteAllAsync();
+            await _logRepository.DeleteAllAdminLogsAsync();
 
             await _authManager.AddAdminLogAsync("清空管理员日志");
 

@@ -1,16 +1,22 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Request;
+using NSwag.Annotations;
+using SSCMS.Dto;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Configs
 {
-    [Route("admin/settings/configsHomeMenu")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class ConfigsHomeMenuController : ControllerBase
     {
-        private const string Route = "";
-        private const string RouteReset = "actions/reset";
+        private const string Route = "settings/configsHomeMenu";
+        private const string RouteReset = "settings/configsHomeMenu/actions/reset";
 
         private readonly IAuthManager _authManager;
         private readonly IUserMenuRepository _userMenuRepository;
@@ -26,16 +32,14 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Configs
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsConfigsHomeMenu))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsConfigsHomeMenu))
             {
                 return Unauthorized();
             }
 
             return new GetResult
             {
-                UserMenus = await _userMenuRepository.GetUserMenuListAsync(),
+                UserMenus = await _userMenuRepository.GetUserMenusAsync(),
                 Groups = await _userGroupRepository.GetUserGroupListAsync()
             };
         }
@@ -43,9 +47,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Configs
         [HttpDelete, Route(Route)]
         public async Task<ActionResult<UserMenusResult>> Delete([FromBody]IdRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsConfigsHomeMenu))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsConfigsHomeMenu))
             {
                 return Unauthorized();
             }
@@ -54,16 +56,14 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Configs
 
             return new UserMenusResult
             {
-                UserMenus = await _userMenuRepository.GetUserMenuListAsync()
+                UserMenus = await _userMenuRepository.GetUserMenusAsync()
             };
         }
 
         [HttpPost, Route(Route)]
         public async Task<ActionResult<UserMenusResult>> Submit([FromBody] SubmitRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsConfigsHomeMenu))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsConfigsHomeMenu))
             {
                 return Unauthorized();
             }
@@ -79,7 +79,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Configs
                     Taxis = request.Taxis,
                     Text = request.Text,
                     IconClass = request.IconClass,
-                    Href = request.Href,
+                    Link = request.Link,
                     Target = request.Target
                 });
 
@@ -95,7 +95,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Configs
                 userMenu.Taxis = request.Taxis;
                 userMenu.Text = request.Text;
                 userMenu.IconClass = request.IconClass;
-                userMenu.Href = request.Href;
+                userMenu.Link = request.Link;
                 userMenu.Target = request.Target;
                 await _userMenuRepository.UpdateAsync(userMenu);
 
@@ -104,30 +104,24 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Configs
 
             return new UserMenusResult
             {
-                UserMenus = await _userMenuRepository.GetUserMenuListAsync()
+                UserMenus = await _userMenuRepository.GetUserMenusAsync()
             };
         }
 
         [HttpPost, Route(RouteReset)]
         public async Task<ActionResult<UserMenusResult>> Reset()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsConfigsHomeMenu))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsConfigsHomeMenu))
             {
                 return Unauthorized();
             }
 
-            foreach (var userMenuInfo in await _userMenuRepository.GetUserMenuListAsync())
-            {
-                await _userMenuRepository.DeleteAsync(userMenuInfo.Id);
-            }
-
+            await _userMenuRepository.ResetAsync();
             await _authManager.AddAdminLogAsync("重置用户菜单");
 
             return new UserMenusResult
             {
-                UserMenus = await _userMenuRepository.GetUserMenuListAsync()
+                UserMenus = await _userMenuRepository.GetUserMenusAsync()
             };
         }
     }

@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Datory;
-using SSCMS;
 using SSCMS.Core.Utils.Serialization.Atom.Atom.Core;
+using SSCMS.Enums;
+using SSCMS.Models;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Core.Utils.Serialization.Components
@@ -11,13 +13,15 @@ namespace SSCMS.Core.Utils.Serialization.Components
     {
         private readonly IPathManager _pathManager;
         private readonly IDatabaseManager _databaseManager;
-		private readonly Site _site;
+        private readonly CacheUtils _caching;
+        private readonly Site _site;
 		private readonly string _filePath;
 
-		public TemplateIe(IPathManager pathManager, IDatabaseManager databaseManager, Site site, string filePath)
+		public TemplateIe(IPathManager pathManager, IDatabaseManager databaseManager, CacheUtils caching, Site site, string filePath)
         {
             _pathManager = pathManager;
             _databaseManager = databaseManager;
+            _caching = caching;
             _site = site;
 			_filePath = filePath;
 		}
@@ -131,7 +135,7 @@ namespace SSCMS.Core.Utils.Serialization.Components
 
             foreach (var template in templates)
             {
-                Caching.SetProcess(guid, $"导入模板文件: {template.TemplateName}");
+                _caching.SetProcess(guid, $"导入模板文件: {template.TemplateName}");
 
                 if (template.Id > 0)
                 {

@@ -1,35 +1,40 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Request;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
 using SSCMS.Core.Utils.Office;
+using SSCMS.Dto;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Users
 {
-    [Route("admin/settings/users")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class UsersController : ControllerBase
     {
-        private const string Route = "";
-        private const string RouteImport = "actions/import";
-        private const string RouteExport = "actions/export";
-        private const string RouteCheck = "actions/check";
-        private const string RouteLock = "actions/lock";
-        private const string RouteUnLock = "actions/unLock";
+        private const string Route = "settings/users";
+        private const string RouteImport = "settings/users/actions/import";
+        private const string RouteExport = "settings/users/actions/export";
+        private const string RouteCheck = "settings/users/actions/check";
+        private const string RouteLock = "settings/users/actions/lock";
+        private const string RouteUnLock = "settings/users/actions/unLock";
 
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
         private readonly IDatabaseManager _databaseManager;
-        private readonly IPluginManager _pluginManager;
+        private readonly IOldPluginManager _pluginManager;
         private readonly IUserRepository _userRepository;
         private readonly IUserGroupRepository _userGroupRepository;
 
-        public UsersController(IAuthManager authManager, IPathManager pathManager, IDatabaseManager databaseManager, IPluginManager pluginManager, IUserRepository userRepository, IUserGroupRepository userGroupRepository)
+        public UsersController(IAuthManager authManager, IPathManager pathManager, IDatabaseManager databaseManager, IOldPluginManager pluginManager, IUserRepository userRepository, IUserGroupRepository userGroupRepository)
         {
             _authManager = authManager;
             _pathManager = pathManager;
@@ -42,9 +47,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResults>> Get([FromQuery]GetRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUsers))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUsers))
             {
                 return Unauthorized();
             }
@@ -65,9 +68,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
         [HttpDelete, Route(Route)]
         public async Task<ActionResult<BoolResult>> Delete([FromBody] IdRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUsers))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUsers))
             {
                 return Unauthorized();
             }
@@ -85,9 +86,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
         [HttpPost, Route(RouteImport)]
         public async Task<ActionResult<ImportResult>> Import([FromForm] IFormFile file)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUsers))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUsers))
             {
                 return Unauthorized();
             }
@@ -129,14 +128,14 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
 
                     if (!string.IsNullOrEmpty(userName) && !string.IsNullOrEmpty(password))
                     {
-                        var (userId, message) = await _userRepository.InsertAsync(new User
+                        var (user, message) = await _userRepository.InsertAsync(new User
                         {
                             UserName = userName,
                             DisplayName = displayName,
                             Mobile = mobile,
                             Email = email
                         }, password, string.Empty);
-                        if (userId == 0)
+                        if (user == null)
                         {
                             failure++;
                             errorMessage = message;
@@ -165,9 +164,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
         [HttpGet, Route(RouteExport)]
         public async Task<ActionResult> Export()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUsers))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUsers))
             {
                 return Unauthorized();
             }
@@ -184,9 +181,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
         [HttpPost, Route(RouteCheck)]
         public async Task<ActionResult<BoolResult>> Check([FromBody] IdRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUsers))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUsers))
             {
                 return Unauthorized();
             }
@@ -207,9 +202,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
         [HttpPost, Route(RouteLock)]
         public async Task<ActionResult<BoolResult>> Lock([FromBody] IdRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUsers))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUsers))
             {
                 return Unauthorized();
             }
@@ -232,9 +225,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
         [HttpPost, Route(RouteUnLock)]
         public async Task<ActionResult<BoolResult>> UnLock([FromBody] IdRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUsers))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUsers))
             {
                 return Unauthorized();
             }

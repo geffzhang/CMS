@@ -4,9 +4,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Datory;
 using Datory.Utils;
-using SSCMS;
+using SSCMS.Enums;
+using SSCMS.Models;
+using SSCMS.Services;
 using SSCMS.Utils;
-using Content = SSCMS.Content;
 
 namespace SSCMS.Core.Utils
 {
@@ -98,7 +99,7 @@ namespace SSCMS.Core.Utils
             }
         }
 
-        public static async Task TranslateAsync(IPathManager pathManager, IDatabaseManager databaseManager, IPluginManager pluginManager, Site site, int channelId, int contentId, int targetSiteId, int targetChannelId, TranslateContentType translateType, ICreateManager createManager)
+        public static async Task TranslateAsync(IPathManager pathManager, IDatabaseManager databaseManager, IOldPluginManager pluginManager, Site site, int channelId, int contentId, int targetSiteId, int targetChannelId, TranslateContentType translateType, ICreateManager createManager)
         {
             if (site == null || channelId <= 0 || contentId <= 0 || targetSiteId <= 0 || targetChannelId <= 0) return;
 

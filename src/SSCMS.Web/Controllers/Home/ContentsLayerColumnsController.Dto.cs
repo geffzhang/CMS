@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
-using SSCMS;
-using SSCMS.Dto.Request;
+using SSCMS.Dto;
 
 namespace SSCMS.Web.Controllers.Home
 {

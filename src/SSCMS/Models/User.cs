@@ -2,8 +2,9 @@
 using Datory;
 using Datory.Annotations;
 using Newtonsoft.Json;
+using SSCMS.Enums;
 
-namespace SSCMS
+namespace SSCMS.Models
 {
     [DataTable("siteserver_User")]
     public class User : Entity
@@ -22,9 +23,6 @@ namespace SSCMS
         [DataColumn]
         [JsonIgnore]
         public string PasswordSalt { get; set; }
-
-        [DataColumn]
-        public DateTime? CreateDate { get; set; }
 
         [DataColumn]
         public DateTime? LastResetPasswordDate { get; set; }
@@ -64,15 +62,6 @@ namespace SSCMS
 
         [DataColumn]
         public string Birthday { get; set; }
-
-        [DataColumn]
-        public string WeiXin { get; set; }
-
-        [DataColumn]
-        public string Qq { get; set; }
-
-        [DataColumn]
-        public string WeiBo { get; set; }
 
         [DataColumn(Text = true)]
         public string Bio { get; set; }

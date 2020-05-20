@@ -2,24 +2,29 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Datory;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
+using SSCMS.Configuration;
 using SSCMS.Core.Extensions;
 using SSCMS.Core.Utils.Serialization;
+using SSCMS.Dto;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Settings.Users
 {
-    [Route("admin/settings/usersStyle")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class UsersStyleController : ControllerBase
     {
-        private const string Route = "";
-        private const string RouteImport = "actions/import";
-        private const string RouteExport = "actions/export";
-        private const string RouteReset = "actions/reset";
+        private const string Route = "settings/usersStyle";
+        private const string RouteImport = "settings/usersStyle/actions/import";
+        private const string RouteExport = "settings/usersStyle/actions/export";
+        private const string RouteReset = "settings/usersStyle/actions/reset";
 
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
@@ -39,25 +44,23 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUsersStyle))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUsersStyle))
             {
                 return Unauthorized();
             }
 
             var allAttributes = _userRepository.TableColumns.Select(x => x.AttributeName).ToList();
 
-            var styles = new List<Style>();
+            var styles = new List<InputStyle>();
             foreach (var style in await _tableStyleRepository.GetUserStyleListAsync())
             {
-                styles.Add(new Style
+                styles.Add(new InputStyle
                 {
                     Id = style.Id,
                     AttributeName = style.AttributeName,
                     DisplayName = style.DisplayName,
-                    InputType = style.InputType.GetDisplayName(),
-                    Rules = TranslateUtils.JsonDeserialize<IEnumerable<TableStyleRule>>(style.RuleValues),
+                    InputType = style.InputType,
+                    Rules = TranslateUtils.JsonDeserialize<List<InputStyleRule>>(style.RuleValues),
                     Taxis = style.Taxis,
                     IsSystem = StringUtils.ContainsIgnoreCase(allAttributes, style.AttributeName)
                 });
@@ -74,9 +77,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
         [HttpDelete, Route(Route)]
         public async Task<ActionResult<DeleteResult>> Delete([FromBody] DeleteRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUsersStyle))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUsersStyle))
             {
                 return Unauthorized();
             }
@@ -85,16 +86,16 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
 
             var allAttributes = _userRepository.TableColumns.Select(x => x.AttributeName).ToList();
 
-            var styles = new List<Style>();
+            var styles = new List<InputStyle>();
             foreach (var style in await _tableStyleRepository.GetUserStyleListAsync())
             {
-                styles.Add(new Style
+                styles.Add(new InputStyle
                 {
                     Id = style.Id,
                     AttributeName = style.AttributeName,
                     DisplayName = style.DisplayName,
-                    InputType = style.InputType.GetDisplayName(),
-                    Rules = TranslateUtils.JsonDeserialize<IEnumerable<TableStyleRule>>(style.RuleValues),
+                    InputType = style.InputType,
+                    Rules = TranslateUtils.JsonDeserialize<List<InputStyleRule>>(style.RuleValues),
                     Taxis = style.Taxis,
                     IsSystem = StringUtils.ContainsIgnoreCase(allAttributes, style.AttributeName)
                 });
@@ -109,9 +110,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
         [HttpPost, Route(RouteImport)]
         public async Task<ActionResult<BoolResult>> Import([FromForm] IFormFile file)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUsers))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUsers))
             {
                 return Unauthorized();
             }
@@ -148,9 +147,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
         [HttpGet, Route(RouteExport)]
         public async Task<ActionResult> Export()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUsers))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUsers))
             {
                 return Unauthorized();
             }
@@ -164,9 +161,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
         [HttpPost, Route(RouteReset)]
         public async Task<ActionResult<ResetResult>> Reset()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.SettingsUsersStyle))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.SettingsUsersStyle))
             {
                 return Unauthorized();
             }
@@ -175,16 +170,16 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Users
 
             var allAttributes = _userRepository.TableColumns.Select(x => x.AttributeName).ToList();
 
-            var styles = new List<Style>();
+            var styles = new List<InputStyle>();
             foreach (var style in await _tableStyleRepository.GetUserStyleListAsync())
             {
-                styles.Add(new Style
+                styles.Add(new InputStyle
                 {
                     Id = style.Id,
                     AttributeName = style.AttributeName,
                     DisplayName = style.DisplayName,
-                    InputType = style.InputType.GetDisplayName(),
-                    Rules = TranslateUtils.JsonDeserialize<IEnumerable<TableStyleRule>>(style.RuleValues),
+                    InputType = style.InputType,
+                    Rules = TranslateUtils.JsonDeserialize<List<InputStyleRule>>(style.RuleValues),
                     Taxis = style.Taxis,
                     IsSystem = StringUtils.ContainsIgnoreCase(allAttributes, style.AttributeName)
                 });

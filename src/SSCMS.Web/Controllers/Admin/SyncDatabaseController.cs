@@ -1,23 +1,25 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin
 {
-    [ApiController]
-    [Route(Constants.ApiRoute)]
+    [OpenApiIgnore]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class SyncDatabaseController : ControllerBase
     {
         public const string Route = "syncDatabase";
 
         private readonly ISettingsManager _settingsManager;
         private readonly IDatabaseManager _databaseManager;
-        private readonly IPluginManager _pluginManager;
+        private readonly IOldPluginManager _pluginManager;
         private readonly IConfigRepository _configRepository;
 
-        public SyncDatabaseController(ISettingsManager settingsManager, IDatabaseManager databaseManager, IPluginManager pluginManager, IConfigRepository configRepository)
+        public SyncDatabaseController(ISettingsManager settingsManager, IDatabaseManager databaseManager, IOldPluginManager pluginManager, IConfigRepository configRepository)
         {
             _settingsManager = settingsManager;
             _databaseManager = databaseManager;
@@ -38,7 +40,7 @@ namespace SSCMS.Web.Controllers.Admin
             return new GetResult
             {
                 DatabaseVersion = config.DatabaseVersion,
-                ProductVersion = _settingsManager.ProductVersion
+                Version = _settingsManager.Version
             };
         }
 
@@ -55,7 +57,7 @@ namespace SSCMS.Web.Controllers.Admin
 
             return new SubmitResult
             {
-                Version = _settingsManager.ProductVersion
+                Version = _settingsManager.Version
             };
         }
     }

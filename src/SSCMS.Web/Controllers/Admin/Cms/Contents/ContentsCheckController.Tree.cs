@@ -1,9 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
 using SSCMS.Dto;
-using SSCMS.Dto.Request;
 using SSCMS.Core.Utils;
 using SSCMS.Utils;
 
@@ -14,10 +12,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Contents
         [HttpPost, Route(RouteTree)]
         public async Task<ActionResult<TreeResult>> Tree([FromBody]SiteRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.ContentsCheck))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.ContentsCheck))
             {
                 return Unauthorized();
             }

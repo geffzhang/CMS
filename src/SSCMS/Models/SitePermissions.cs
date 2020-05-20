@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Datory;
 using Datory.Annotations;
 
-namespace SSCMS
+namespace SSCMS.Models
 {
     [DataTable("siteserver_SitePermissions")]
     public class SitePermissions : Entity
@@ -17,9 +17,12 @@ namespace SSCMS
         public List<int> ChannelIds { get; set; }
 
         [DataColumn(Text = true)]
+        public List<string> Permissions { get; set; }
+
+        [DataColumn(Text = true)]
         public List<string> ChannelPermissions { get; set; }
 
         [DataColumn(Text = true)]
-        public List<string> WebsitePermissions { get; set; }
+        public List<string> ContentPermissions { get; set; }
     }
 }

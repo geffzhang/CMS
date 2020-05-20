@@ -1,12 +1,15 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
 using SSCMS.Core.StlParser.Model;
 using SSCMS.Core.StlParser.StlElement;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Stl
 {
+    [OpenApiIgnore]
+    [Route(Constants.ApiStlPrefix)]
     public partial class ActionsDynamicController : ControllerBase
     {
         private readonly ISettingsManager _settingsManager;
@@ -20,7 +23,7 @@ namespace SSCMS.Web.Controllers.Stl
             _parseManager = parseManager;
         }
 
-        [HttpPost, Route(Constants.RouteActionsDynamic)]
+        [HttpPost, Route(Constants.RouteStlActionsDynamic)]
         public async Task<SubmitResult> Submit([FromBody]SubmitRequest request)
         {
             var user = await _authManager.GetUserAsync();

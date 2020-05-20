@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using Datory;
 using Datory.Annotations;
+using SSCMS.Enums;
 
-namespace SSCMS
+namespace SSCMS.Models
 {
     [DataTable("siteserver_Site")]
     public class Site : Entity
@@ -13,6 +14,18 @@ namespace SSCMS
 
         [DataColumn]
         public string SiteName { get; set; }
+
+        [DataColumn]
+        public string SiteType { get; set; }
+
+        [DataColumn]
+        public string ImageUrl { get; set; }
+
+        [DataColumn]
+        public string Keywords { get; set; }
+
+        [DataColumn]
+        public string Description { get; set; }
 
         [DataColumn]
         public string TableName { get; set; }
@@ -50,8 +63,6 @@ namespace SSCMS
 
         public int PhotoMiddleWidth { get; set; } = 400;
 
-        /****************ͼƬˮӡ����********************/
-
         public bool IsWaterMark { get; set; }
 
         public bool IsImageWaterMark { get; set; }
@@ -71,8 +82,6 @@ namespace SSCMS
         public int WaterMarkFontSize { get; set; } = 12;
 
         public string WaterMarkImagePath { get; set; }
-
-        /****************����ҳ������********************/
 
         public bool IsSeparatedWeb { get; set; }
 
@@ -114,19 +123,13 @@ namespace SSCMS
 
         public DateTime CreateStaticContentAddDate { get; set; } = DateTime.MinValue;
 
-        /****************��վת������********************/
-
         public bool IsCrossSiteTransChecked { get; set; }
-
-        /****************�����ֶ�����********************/
 
         public List<string> SearchListColumns { get; set; }
 
         public List<string> CheckListColumns { get; set; }
 
         public List<string> RecycleListColumns { get; set; }
-
-        /****************��¼ϵͳ��������********************/
 
         public bool ConfigUEditorVideoIsImageUrl { get; set; }
 
@@ -190,15 +193,13 @@ namespace SSCMS
 
         public bool ConfigImageEditorIsLinkToOriginal { get; set; }
 
-        /****************�ϴ�����*************************/
-
         public string ImageUploadDirectoryName { get; set; } = "upload/images";
 
         public DateFormatType ImageUploadDateFormatString { get; set; } = DateFormatType.Month;
 
         public bool IsImageUploadChangeFileName { get; set; } = true;
 
-        public string ImageUploadTypeCollection { get; set; } = "gif,jpg,jpeg,bmp,png,pneg,swf,webp";
+        public string ImageUploadExtensions { get; set; } = ".gif,.jpg,.jpeg,.bmp,.png,.pneg,.swf,.webp";
 
         public int ImageUploadTypeMaxSize { get; set; } = 15360;
 
@@ -212,8 +213,8 @@ namespace SSCMS
 
         public bool IsVideoUploadChangeFileName { get; set; } = true;
 
-        public string VideoUploadTypeCollection { get; set; } =
-            "asf,asx,avi,flv,mid,midi,mov,mp3,mp4,mpg,mpeg,ogg,ra,rm,rmb,rmvb,rp,rt,smi,swf,wav,webm,wma,wmv,viv";
+        public string VideoUploadExtensions { get; set; } =
+            ".asf,.asx,.avi,.flv,.mid,.midi,.mov,.mp3,.mp4,.mpg,.mpeg,.ogg,.ra,.rm,.rmb,.rmvb,.rp,.rt,.smi,.swf,.wav,.webm,.wma,.wmv,.viv";
 
         public int VideoUploadTypeMaxSize { get; set; } = 307200;
 
@@ -223,11 +224,9 @@ namespace SSCMS
 
         public bool IsFileUploadChangeFileName { get; set; } = true;
 
-        public string FileUploadTypeCollection { get; set; } = "zip,rar,7z,js,css,txt,doc,docx,ppt,pptx,xls,xlsx,pdf";
+        public string FileUploadExtensions { get; set; } = ".zip,.rar,.7z,.tar,.gz,.bz2,.cab,.iso,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.txt,.md,.xml,.js,.css";
 
         public int FileUploadTypeMaxSize { get; set; } = 307200;
-
-        /****************ģ����Դ�ļ�������*************************/
 
         public string TemplatesAssetsIncludeDir { get; set; } = "include";
 

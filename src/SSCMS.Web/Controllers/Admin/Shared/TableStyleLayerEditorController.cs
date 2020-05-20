@@ -1,18 +1,27 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Datory.Utils;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
+using SSCMS.Configuration;
 using SSCMS.Core.Extensions;
 using SSCMS.Core.Utils;
+using SSCMS.Dto;
+using SSCMS.Enums;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
+using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Shared
 {
-    [Route("admin/shared/tableStyleLayerEditor")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class TableStyleLayerEditorController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "shared/tableStyleLayerEditor";
 
         private readonly IAuthManager _authManager;
         private readonly IDatabaseManager _databaseManager;
@@ -28,23 +37,20 @@ namespace SSCMS.Web.Controllers.Admin.Shared
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery] GetRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync()) return Unauthorized();
-
             var style = await _tableStyleRepository.GetTableStyleAsync(request.TableName, request.AttributeName, request.RelatedIdentities) ?? new TableStyle
             {
                 InputType = InputType.Text
             };
             if (style.Items == null)
             {
-                style.Items = new List<TableStyleItem>();
+                style.Items = new List<InputStyleItem>();
             }
 
             var isRapid = true;
             var rapidValues = string.Empty;
             if (style.Items.Count == 0)
             {
-                style.Items.Add(new TableStyleItem
+                style.Items.Add(new InputStyleItem
                 {
                     Label = string.Empty,
                     Value = string.Empty,
@@ -102,9 +108,6 @@ namespace SSCMS.Web.Controllers.Admin.Shared
         [HttpPost, Route(Route)]
         public async Task<ActionResult<BoolResult>> Submit([FromBody] SubmitRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync()) return Unauthorized();
-
             var styleDatabase =
                 await _tableStyleRepository.GetTableStyleAsync(request.TableName, request.AttributeName, request.RelatedIdentities) ??
                 new TableStyle();

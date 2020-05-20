@@ -2,8 +2,9 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using SSCMS.Configuration;
 using SSCMS.Core.Utils;
+using SSCMS.Models;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Editor
@@ -13,11 +14,10 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Editor
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery]GetRequest request)
         {
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Contents) ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentAdd) ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentEdit))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Contents) ||
+                !await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.Add) ||
+                !await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.Edit))
             {
                 return Unauthorized();
             }
@@ -33,14 +33,11 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Editor
 
             var tableName = _channelRepository.GetTableName(site, channel);
             var allStyles = await _tableStyleRepository.GetContentStyleListAsync(channel, tableName);
-            var styles = allStyles.Where(style =>
-                    !string.IsNullOrEmpty(style.DisplayName) && !StringUtils.ContainsIgnoreCase(ColumnsManager.MetadataAttributes.Value, style.AttributeName)).Select(
-                x =>
-                {
-                    var style = x.Clone<TableStyle>();
-                    style.AttributeName = StringUtils.LowerFirst(x.AttributeName);
-                    return style;
-                });
+            var styles = allStyles
+                .Where(style =>
+                    !string.IsNullOrEmpty(style.DisplayName) &&
+                    !StringUtils.ContainsIgnoreCase(ColumnsManager.MetadataAttributes.Value, style.AttributeName))
+                .Select(x => new InputStyle(x));
 
             var (userIsChecked, userCheckedLevel) = await CheckManager.GetUserCheckLevelAsync(_authManager, site, site.Id);
             var checkedLevels = CheckManager.GetCheckedLevelOptions(site, userIsChecked, userCheckedLevel, true);

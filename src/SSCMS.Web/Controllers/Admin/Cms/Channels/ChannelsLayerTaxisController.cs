@@ -1,15 +1,20 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Channels
 {
-    [Route("admin/cms/channels/channelsLayerTaxis")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class ChannelsLayerTaxisController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "cms/channels/channelsLayerTaxis";
 
         private readonly IAuthManager _authManager;
         private readonly ISiteRepository _siteRepository;
@@ -25,9 +30,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Channels
         [HttpPost, Route(Route)]
         public async Task<ActionResult<List<int>>> Submit([FromBody] SubmitRequest request)
         {
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Channels))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Channels))
             {
                 return Unauthorized();
             }

@@ -2,31 +2,40 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using CacheManager.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Request;
+using NSwag.Annotations;
 using SSCMS.Core.Utils;
 using SSCMS.Core.Utils.Office;
 using SSCMS.Core.Utils.Serialization;
+using SSCMS.Dto;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Home
 {
-    [Route("home/contentsLayerExport")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.User)]
+    [Route(Constants.ApiHomePrefix)]
     public partial class ContentsLayerExportController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "contentsLayerExport";
 
+        private readonly ICacheManager<CacheUtils.Process> _cacheManager;
         private readonly IAuthManager _authManager;
         private readonly IPathManager _pathManager;
-        private readonly IPluginManager _pluginManager;
+        private readonly IOldPluginManager _pluginManager;
         private readonly IDatabaseManager _databaseManager;
         private readonly ISiteRepository _siteRepository;
         private readonly IChannelRepository _channelRepository;
         private readonly IContentRepository _contentRepository;
 
-        public ContentsLayerExportController(IAuthManager authManager, IPathManager pathManager, IPluginManager pluginManager, IDatabaseManager databaseManager, ISiteRepository siteRepository, IChannelRepository channelRepository, IContentRepository contentRepository)
+        public ContentsLayerExportController(ICacheManager<CacheUtils.Process> cacheManager, IAuthManager authManager, IPathManager pathManager, IOldPluginManager pluginManager, IDatabaseManager databaseManager, ISiteRepository siteRepository, IChannelRepository channelRepository, IContentRepository contentRepository)
         {
+            _cacheManager = cacheManager;
             _authManager = authManager;
             _pathManager = pathManager;
             _pluginManager = pluginManager;
@@ -39,8 +48,7 @@ namespace SSCMS.Web.Controllers.Home
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery] ChannelRequest request)
         {
-            if (!await _authManager.IsUserAuthenticatedAsync() ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ContentView))
+            if (!await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.View))
             {
                 return Unauthorized();
             }
@@ -68,8 +76,7 @@ namespace SSCMS.Web.Controllers.Home
         [HttpPost, Route(Route)]
         public async Task<ActionResult<SubmitResult>> Submit([FromBody] SubmitRequest request)
         {
-            if (!await _authManager.IsUserAuthenticatedAsync() ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.ChannelId, Constants.ChannelPermissions.ChannelEdit))
+            if (!await _authManager.HasContentPermissionsAsync(request.SiteId, request.ChannelId, AuthTypes.SiteContentPermissions.View))
             {
                 return Unauthorized();
             }
@@ -140,7 +147,9 @@ namespace SSCMS.Web.Controllers.Home
                     {
                         var fileName = $"{channel.ChannelName}.zip";
                         var filePath = _pathManager.GetTemporaryFilesPath(fileName);
-                        var exportObject = new ExportObject(_pathManager, _databaseManager, _pluginManager, site);
+
+                        var caching = new CacheUtils(_cacheManager);
+                        var exportObject = new ExportObject(_pathManager, _databaseManager, caching, _pluginManager, site);
                         contentInfoList.Reverse();
                         if (await exportObject.ExportContentsAsync(filePath, contentInfoList))
                         {

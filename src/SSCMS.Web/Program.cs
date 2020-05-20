@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using SSCMS;
+using SSCMS.Core.Utils;
 using SSCMS.Utils;
 
 namespace SSCMS.Web
@@ -14,16 +14,26 @@ namespace SSCMS.Web
         public static void Main(string[] args)
         {
             Console.Title = "SS CMS";
+
+            InstallUtils.Init(Directory.GetCurrentDirectory());
+
             CreateHostBuilder(args).Build().Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration(ConfigConfiguration)
+                .ConfigureAppConfiguration((hostingContext, config) =>
+                {
+                    config.SetBasePath(Directory.GetCurrentDirectory())
+                        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                        .AddJsonFile(Constants.PackageFileName, optional: true, reloadOnChange: true)
+                        .AddJsonFile(Constants.ConfigFileName, optional: true, reloadOnChange: true)
+                        .AddEnvironmentVariables("SSCMS_")
+                        .AddCommandLine(args);
+                })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder
-                        //.UseUrls("http://0.0.0.0:80/")
                         .UseSerilog((hostingContext, loggerConfiguration) =>
                         {
                             loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration);
@@ -33,13 +43,5 @@ namespace SSCMS.Web
                         .UseIIS()
                         .UseStartup<Startup>();
                 });
-
-        static void ConfigConfiguration(IConfigurationBuilder config)
-        {
-            config.SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile(Constants.ConfigFileName, optional: true, reloadOnChange: true)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddEnvironmentVariables();
-        }
     }
 }

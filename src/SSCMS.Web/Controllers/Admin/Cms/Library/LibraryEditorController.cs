@@ -1,22 +1,27 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Request;
-using SSCMS.Dto.Result;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
+using SSCMS.Dto;
+using SSCMS.Enums;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Library
 {
-    
-    [Route("admin/cms/library/libraryEditor")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class LibraryEditorController : ControllerBase
     {
-        private const string Route = "";
-        private const string RouteId = "{id}";
-        private const string RouteUpload = "actions/upload";
+        private const string Route = "cms/library/libraryEditor";
+        private const string RouteId = "cms/library/libraryEditor/{id}";
+        private const string RouteUpload = "cms/library/libraryEditor/actions/upload";
 
         private readonly ISettingsManager _settingsManager;
         private readonly IAuthManager _authManager;
@@ -34,11 +39,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Library
         [HttpGet, Route(RouteId)]
         public async Task<ActionResult<LibraryText>> Get([FromBody]GetRequest request)
         {
-            
-
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Library))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.LibraryText))
             {
                 return Unauthorized();
             }
@@ -49,11 +51,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Library
         [HttpPost, Route(Route)]
         public async Task<ActionResult<LibraryText>> Create([FromBody] CreateRequest request)
         {
-            
-
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Library))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.LibraryText))
             {
                 return Unauthorized();
             }
@@ -84,11 +83,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Library
         [HttpPut, Route(RouteId)]
         public async Task<ActionResult<LibraryText>> Update([FromBody] UpdateRequest request)
         {
-            
-
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Library))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.LibraryText))
             {
                 return Unauthorized();
             }
@@ -106,11 +102,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Library
         [HttpPost, Route(RouteUpload)]
         public async Task<ActionResult<StringResult>> Upload([FromQuery] SiteRequest request, [FromForm] IFormFile file)
         {
-            
-
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Library))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.LibraryText))
             {
                 return Unauthorized();
             }

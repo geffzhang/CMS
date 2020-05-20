@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Datory;
 using Datory.Utils;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using SSCMS.Configuration;
 using SSCMS.Dto;
 using SSCMS.Core.Extensions;
 using SSCMS.Core.Utils;
+using SSCMS.Enums;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Channels
@@ -16,10 +16,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Channels
         [HttpGet, Route(RouteGet)]
         public async Task<ActionResult<ChannelResult>> Get(int siteId, int channelId)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(siteId,
-                    Constants.SitePermissions.Channels))
+            if (!await _authManager.HasSitePermissionsAsync(siteId,
+                    AuthTypes.SitePermissions.Channels))
             {
                 return Unauthorized();
             }
@@ -38,32 +36,24 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Channels
                 new Select<string>(TaxisType.OrderByAddDate)
             };
 
-            var styles = new List<Style>();
+            var styles = new List<InputStyle>();
             foreach (var style in await _tableStyleRepository.GetChannelStyleListAsync( channel))
             {
-                styles.Add(new Style
-                {
-                    Id = style.Id,
-                    AttributeName = style.AttributeName,
-                    DisplayName = style.DisplayName,
-                    InputType = style.InputType.GetValue(),
-                    Rules = TranslateUtils.JsonDeserialize<IEnumerable<TableStyleRule>>(style.RuleValues),
-                    Items = style.Items
-                });
+                styles.Add(new InputStyle(style));
 
                 if (style.InputType == InputType.Image ||
                     style.InputType == InputType.Video ||
                     style.InputType == InputType.File)
                 {
-                    site.Set(ColumnsManager.GetCountName(style.AttributeName),
-                        site.Get(ColumnsManager.GetCountName(style.AttributeName), 0));
+                    channel.Set(ColumnsManager.GetCountName(style.AttributeName),
+                        channel.Get(ColumnsManager.GetCountName(style.AttributeName), 0));
                 }
                 else if (style.InputType == InputType.CheckBox ||
                          style.InputType == InputType.SelectMultiple)
                 {
-                    var list = Utilities.GetStringList(site.Get(style.AttributeName,
+                    var list = Utilities.GetStringList(channel.Get(style.AttributeName,
                         string.Empty));
-                    site.Set(style.AttributeName, list);
+                    channel.Set(style.AttributeName, list);
                 }
             }
 
@@ -79,9 +69,7 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Channels
         [HttpPut, Route(Route)]
         public async Task<ActionResult<List<int>>> Edit([FromBody] PutRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasChannelPermissionsAsync(request.SiteId, request.Id, Constants.ChannelPermissions.ChannelEdit))
+            if (!await _authManager.HasChannelPermissionsAsync(request.SiteId, request.Id, AuthTypes.SiteChannelPermissions.Edit))
             {
                 return Unauthorized();
             }

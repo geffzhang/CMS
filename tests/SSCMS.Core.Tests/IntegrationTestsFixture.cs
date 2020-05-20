@@ -1,12 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Datory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using SSCMS;
-using SSCMS.Plugins;
 using SSCMS.Core.Extensions;
+using SSCMS.Core.Plugins.Extensions;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Core.Tests
@@ -14,56 +16,60 @@ namespace SSCMS.Core.Tests
     public class IntegrationTestsFixture : IDisposable
     {
         public IConfiguration Configuration { get; }
-        public ServiceProvider Provider { get; set; }
-        public ISettingsManager SettingsManager { get; set; }
+        public string ContentRootPath { get; }
+        public string WebRootPath { get; }
+        public ServiceProvider Provider { get; }
 
         public IntegrationTestsFixture()
         {
-            var contentRootPath = Directory.GetCurrentDirectory();
+            var codeBaseUrl = new Uri(Assembly.GetExecutingAssembly().CodeBase);
+            var codeBasePath = Uri.UnescapeDataString(codeBaseUrl.AbsolutePath);
+            var dirPath = Path.GetDirectoryName(codeBasePath);
 
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(contentRootPath)
-                .AddJsonFile("ss.json")
+            ContentRootPath = DirectoryUtils.GetParentPath(DirectoryUtils.GetParentPath(DirectoryUtils.GetParentPath(dirPath)));
+            WebRootPath = PathUtils.Combine(ContentRootPath, "wwwroot");
+
+            Configuration = new ConfigurationBuilder()
+                .SetBasePath(ContentRootPath)
+                .AddJsonFile("sscms.json")
                 .Build();
 
             var services = new ServiceCollection();
-            SettingsManager = services.AddSettingsManager(configuration, contentRootPath, PathUtils.Combine(contentRootPath, "wwwroot"));
-            services.AddCache(SettingsManager.Redis.ConnectionString);
 
-            var executingAssembly = Assembly.GetExecutingAssembly();
-            var assemblies = executingAssembly.GetReferencedAssemblies().Select(Assembly.Load).ToList();
-            var path = AppDomain.CurrentDomain.RelativeSearchPath ?? AppDomain.CurrentDomain.BaseDirectory;
-            var fileAssemblies = Directory.GetFiles(path, $"{nameof(SSCMS)}*.dll").Select(Assembly.LoadFrom).ToArray();
-            foreach (var referencedAssembly in fileAssemblies)
+            ConfigureServices(services);
+
+            Provider = services.BuildServiceProvider();
+
+            var settingsManager = Provider.GetService<ISettingsManager>();
+            if (settingsManager.Database.DatabaseType == DatabaseType.SQLite)
             {
-                if (!assemblies.Contains(referencedAssembly))
+                var filePath = PathUtils.Combine(settingsManager.ContentRootPath, Constants.DefaultLocalDbFileName);
+                if (!FileUtils.IsFileExists(filePath))
                 {
-                    assemblies.Add(referencedAssembly);
+                    FileUtils.WriteText(filePath, string.Empty);
                 }
             }
-            if (!assemblies.Contains(executingAssembly))
-            {
-                assemblies.Add(executingAssembly);
-            }
-            AssemblyUtils.SetAssemblies(assemblies);
-
-            services.AddRepositories();
-            services.AddServices();
-            Provider = services.BuildServiceProvider();
-            Configuration = configuration;
-
-
-            //var tableNames = settingsManager.Database.GetTableNamesAsync().GetAwaiter().GetResult();
-            //foreach (var tableName in tableNames)
-            //{
-            //    settingsManager.Database.DropTableAsync(tableName).GetAwaiter().GetResult();
-            //}
-
-            //var databaseRepository = provider.GetService<IDatabaseRepository>();
+            var databaseManager = Provider.GetService<IDatabaseManager>();
+            var pluginManager = Provider.GetService<IOldPluginManager>();
+            databaseManager.SyncDatabaseAsync(pluginManager).GetAwaiter().GetResult();
 
             //var (_, repositories) = databaseRepository.GetAllRepositories(cache, settingsManager);
 
             //databaseRepository.InstallDatabaseAsync("admin", "admin888", repositories).GetAwaiter().GetResult();
+        }
+
+        private void ConfigureServices(IServiceCollection services)
+        {
+            var entryAssembly = Assembly.GetExecutingAssembly();
+            var assemblies = new List<Assembly> { entryAssembly }.Concat(entryAssembly.GetReferencedAssemblies().Select(Assembly.Load));
+
+            var settingsManager = services.AddSettingsManager(Configuration, ContentRootPath, WebRootPath, entryAssembly);
+            services.AddPluginsAsync(Configuration, settingsManager).GetAwaiter().GetResult();
+
+            services.AddCache(settingsManager.Redis.ConnectionString);
+
+            services.AddRepositories(assemblies);
+            services.AddServices();
         }
 
         public void Dispose()

@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using SSCMS;
+using SSCMS.Services;
 
 namespace SSCMS.Core.Utils
 {

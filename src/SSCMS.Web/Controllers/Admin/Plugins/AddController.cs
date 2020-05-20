@@ -1,16 +1,19 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using Datory.Utils;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
+using NSwag.Annotations;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Plugins
 {
-    [Route("admin/plugins/add")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class AddController : ControllerBase
     {
-        private const string Route = "";
+        private const string Route = "plugins/add";
 
         private readonly ISettingsManager _settingsManager;
         private readonly IAuthManager _authManager;
@@ -26,20 +29,17 @@ namespace SSCMS.Web.Controllers.Admin.Plugins
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get()
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSystemPermissionsAsync(Constants.AppPermissions.PluginsAdd))
+            if (!await _authManager.HasAppPermissionsAsync(AuthTypes.AppPermissions.PluginsAdd))
             {
                 return Unauthorized();
             }
 
-            var plugins = _pluginManager.GetPlugins();
-            var packageIds = Utilities.ToString(plugins.Select(x => x.PluginId));
+            var packageIds = _pluginManager.Plugins.Select(x => x.PluginId);
 
             return new GetResult
             {
                 IsNightly = _settingsManager.IsNightlyUpdate,
-                PluginVersion = _settingsManager.PluginVersion,
+                Version = _settingsManager.Version,
                 PackageIds = packageIds
             };
         }

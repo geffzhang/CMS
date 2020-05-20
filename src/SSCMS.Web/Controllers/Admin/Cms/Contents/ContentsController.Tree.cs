@@ -1,11 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
 using SSCMS.Dto;
-using SSCMS.Dto.Request;
 using SSCMS.Core.Utils;
-using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Contents
 {
@@ -14,10 +11,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Contents
         [HttpPost, Route(RouteTree)]
         public async Task<ActionResult<TreeResult>> Tree([FromBody]TreeRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.Contents))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.Contents))
             {
                 return Unauthorized();
             }
@@ -29,10 +24,12 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Contents
 
             var root = await _channelRepository.GetCascadeAsync(site, channel, async summary =>
             {
-                var count = await _contentRepository.GetCountAsync(site, summary);
+                var current = await _contentRepository.GetSummariesAsync(site, summary);
+
+                //var count = await _contentRepository.GetCountAsync(site, summary);
                 return new
                 {
-                    Count = count
+                    current.Count
                 };
             });
 

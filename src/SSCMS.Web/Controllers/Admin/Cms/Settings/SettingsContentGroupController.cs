@@ -1,17 +1,23 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SSCMS;
-using SSCMS.Dto.Request;
+using NSwag.Annotations;
 using SSCMS.Core.Extensions;
+using SSCMS.Dto;
+using SSCMS.Models;
+using SSCMS.Repositories;
+using SSCMS.Services;
 using SSCMS.Utils;
 
 namespace SSCMS.Web.Controllers.Admin.Cms.Settings
 {
-    [Route("admin/cms/settings/settingsContentGroup")]
+    [OpenApiIgnore]
+    [Authorize(Roles = AuthTypes.Roles.Administrator)]
+    [Route(Constants.ApiAdminPrefix)]
     public partial class SettingsContentGroupController : ControllerBase
     {
-        private const string Route = "";
-        private const string RouteOrder = "actions/order";
+        private const string Route = "cms/settings/settingsContentGroup";
+        private const string RouteOrder = "cms/settings/settingsContentGroup/actions/order";
 
         private readonly IAuthManager _authManager;
         private readonly IContentGroupRepository _contentGroupRepository;
@@ -25,10 +31,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpGet, Route(Route)]
         public async Task<ActionResult<GetResult>> Get([FromQuery] SiteRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.ConfigGroups))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.SettingsContentGroup))
             {
                 return Unauthorized();
             }
@@ -44,10 +48,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpDelete, Route(Route)]
         public async Task<ActionResult<GetResult>> Delete([FromBody]DeleteRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.ConfigGroups))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.SettingsContentGroup))
             {
                 return Unauthorized();
             }
@@ -65,10 +67,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpPost, Route(Route)]
         public async Task<ActionResult<GetResult>> Add([FromBody] ChannelGroup request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.ConfigGroups))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.SettingsContentGroup))
             {
                 return Unauthorized();
             }
@@ -100,10 +100,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpPut, Route(Route)]
         public async Task<ActionResult<GetResult>> Edit([FromBody] ChannelGroup request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.ConfigGroups))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.SettingsContentGroup))
             {
                 return Unauthorized();
             }
@@ -133,10 +131,8 @@ namespace SSCMS.Web.Controllers.Admin.Cms.Settings
         [HttpPost, Route(RouteOrder)]
         public async Task<ActionResult<GetResult>> Order([FromBody] OrderRequest request)
         {
-            
-            if (!await _authManager.IsAdminAuthenticatedAsync() ||
-                !await _authManager.HasSitePermissionsAsync(request.SiteId,
-                    Constants.SitePermissions.ConfigGroups))
+            if (!await _authManager.HasSitePermissionsAsync(request.SiteId,
+                    AuthTypes.SitePermissions.SettingsContentGroup))
             {
                 return Unauthorized();
             }
