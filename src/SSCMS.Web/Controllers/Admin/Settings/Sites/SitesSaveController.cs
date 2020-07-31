@@ -4,10 +4,10 @@ using CacheManager.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NSwag.Annotations;
-using SSCMS.Core.Extensions;
 using SSCMS.Core.Utils;
 using SSCMS.Core.Utils.Serialization;
 using SSCMS.Dto;
+using SSCMS.Extensions;
 using SSCMS.Repositories;
 using SSCMS.Services;
 using SSCMS.Utils;
@@ -82,7 +82,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
             var directoryNames = DirectoryUtils.GetDirectoryNames(sitePath);
 
             var directories = new List<string>();
-            var siteDirList = await _siteRepository.GetSiteDirListAsync(0);
+            var siteDirList = await _siteRepository.GetSiteDirsAsync(0);
             foreach (var directoryName in directoryNames)
             {
                 var isSiteDirectory = false;
@@ -172,7 +172,7 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
             var site = await _siteRepository.GetAsync(request.SiteId);
 
             var siteTemplatePath = _pathManager.GetSiteTemplatesPath(request.TemplateDir);
-            var siteContentDirectoryPath = _pathManager.GetSiteTemplateMetadataPath(siteTemplatePath, DirectoryUtils.SiteTemplates.SiteContent);
+            var siteContentDirectoryPath = _pathManager.GetSiteTemplateMetadataPath(siteTemplatePath, DirectoryUtils.SiteFiles.SiteTemplates.SiteContent);
 
             var caching = new CacheUtils(_cacheManager);
             var exportObject = new ExportObject(_pathManager, _databaseManager, caching, _pluginManager, site);
@@ -188,8 +188,8 @@ namespace SSCMS.Web.Controllers.Admin.Settings.Sites
                 Description = request.Description
             };
             var xmlPath = _pathManager.GetSiteTemplateMetadataPath(siteTemplatePath,
-                DirectoryUtils.SiteTemplates.FileMetadata);
-            Serializer.SaveAsXml(siteTemplateInfo, xmlPath);
+                DirectoryUtils.SiteFiles.SiteTemplates.FileMetadata);
+            XmlUtils.SaveAsXml(siteTemplateInfo, xmlPath);
 
             return new BoolResult
             {

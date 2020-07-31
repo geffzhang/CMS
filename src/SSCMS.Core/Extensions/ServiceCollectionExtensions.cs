@@ -7,6 +7,7 @@ using Datory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Senparc.CO2NET.RegisterServices;
 using SSCMS.Core.Services;
 using SSCMS.Services;
 
@@ -16,7 +17,7 @@ namespace SSCMS.Core.Extensions
     {
         public static ISettingsManager AddSettingsManager(this IServiceCollection services, IConfiguration configuration, string contentRootPath, string webRootPath, Assembly entryAssembly)
         {
-            var settingsManager = new SettingsManager(configuration, contentRootPath, webRootPath, entryAssembly);
+            var settingsManager = new SettingsManager(services, configuration, contentRootPath, webRootPath, entryAssembly);
             services.TryAdd(ServiceDescriptor.Singleton<ISettingsManager>(settingsManager));
 
             return settingsManager;
@@ -108,6 +109,12 @@ namespace SSCMS.Core.Extensions
             services.AddScoped<IDatabaseManager, DatabaseManager>();
             services.AddScoped<IParseManager, ParseManager>();
             services.AddScoped<IOldPluginManager, OldPluginManager>();
+        }
+
+        public static void AddOpenManager(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddSenparcGlobalServices(configuration);
+            services.AddScoped<IWxManager, WxManager>();
         }
     }
 }
